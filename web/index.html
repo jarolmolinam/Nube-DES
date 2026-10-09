@@ -1,0 +1,33 @@
+<title>DES en la nube</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+/*__ESTILOS__*/
+.indice { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.indice a { color: inherit; text-decoration: none; display: flex; flex-direction: column; gap: 6px; }
+.indice a:hover h2 { color: var(--sim); }
+.indice a:focus-visible { outline: 2px solid var(--sim); outline-offset: 4px; }
+.indice p { color: var(--tinta-2); }
+</style>
+<!--CUERPO-->
+<div class="pagina">
+  <header class="cabecera">
+    <div>
+      <p class="antetitulo">Modelos y Simulación · módulo de eventos discretos</p>
+      <h1>DES en la nube</h1>
+      <p class="bajada">Applets para ver por dentro la simulación de eventos discretos de una infraestructura nativa de nube. Corren en el navegador, sin nube, Docker ni instalación.</p>
+    </div>
+  </header>
+  <div class="indice">
+    <section class="tarjeta"><a href="pod-unico.html">
+      <p class="antetitulo">Applet 1</p>
+      <h2>Un pod es una cola de un servidor</h2>
+      <p>Reloj, lista de eventos futuros y bitácora, evento por evento. Verificación contra M/M/1, M/G/1 y M/M/1/K.</p>
+    </a></section>
+    <section class="tarjeta"><a href="cadena.html">
+      <p class="antetitulo">Applet 2</p>
+      <h2>Una cadena de microservicios sobre un nodo</h2>
+      <p>Autenticación, catálogo y pagos con réplicas, balanceador, requests y limits, nodo con cupo, HPA, métricas, logs y trazas.</p>
+    </a></section>
+  </div>
+  <p class="pie">Cada applet guarda su escenario como JSON. Con ese texto y la semilla, cualquiera repite la misma corrida.</p>
+</div>

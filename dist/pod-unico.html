@@ -1,0 +1,2655 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pod único DES</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+/* Base visual de todos los applets. Banco de pruebas: el diagrama de bloques es
+   el escenario; debajo se ajusta el modelo y se ve por dentro; al final, los
+   resultados frente a la teoría. */
+:root {
+  --fondo: #eef1f4;
+  --superficie: #fbfcfd;
+  --pozo: #f0f3f6;
+  --tinta: #121a23;
+  --tinta-2: #46525f;
+  --tinta-3: #66727f;
+  --linea: #d6dce3;
+  --linea-fuerte: #aeb8c4;
+  --sim: #2a78d6;
+  --sim-suave: #dfeaf9;
+  --teo: #eb6834;
+  --bien: #0ca30c;
+  --bien-texto: #006300;
+  --alerta: #fab219;
+  --alerta-texto: #7a5200;
+  --critico: #d03b3b;
+  --critico-texto: #a82525;
+  --sobre-sim: #ffffff;
+  --f-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-titulo: "IBM Plex Sans Condensed", "IBM Plex Sans", system-ui, sans-serif;
+  --f-dato: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #0d1116; --superficie: #161b21; --pozo: #1d242c;
+    --tinta: #f1f4f7; --tinta-2: #b7c1cc; --tinta-3: #8a96a3;
+    --linea: #28313b; --linea-fuerte: #3d4856;
+    --sim: #3987e5; --sim-suave: #16304f; --teo: #d95926;
+    --bien: #0ca30c; --bien-texto: #4ccb4c;
+    --alerta: #fab219; --alerta-texto: #f5c04a;
+    --critico: #d03b3b; --critico-texto: #f08a8a;
+    --sobre-sim: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fondo: #0d1116; --superficie: #161b21; --pozo: #1d242c;
+  --tinta: #f1f4f7; --tinta-2: #b7c1cc; --tinta-3: #8a96a3;
+  --linea: #28313b; --linea-fuerte: #3d4856;
+  --sim: #3987e5; --sim-suave: #16304f; --teo: #d95926;
+  --bien: #0ca30c; --bien-texto: #4ccb4c;
+  --alerta: #fab219; --alerta-texto: #f5c04a;
+  --critico: #d03b3b; --critico-texto: #f08a8a;
+  --sobre-sim: #ffffff;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pagina {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+h1, h2, h3, p { margin: 0; }
+h1 { font-family: var(--f-titulo); font-weight: 600; font-size: 30px; line-height: 1.15; text-wrap: balance; }
+h2 { font-family: var(--f-titulo); font-weight: 600; font-size: 19px; line-height: 1.25; text-wrap: balance; }
+h3 { font-family: var(--f-titulo); font-weight: 600; font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--tinta-2); }
+.dato { font-family: var(--f-dato); font-variant-numeric: tabular-nums; }
+.tenue { color: var(--tinta-3); }
+
+/* Cabecera */
+.cabecera { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: flex-end; justify-content: space-between; }
+.cabecera > div { min-width: 0; }
+.antetitulo { font-family: var(--f-titulo); font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sim); margin-bottom: 6px; }
+.bajada { color: var(--tinta-2); max-width: 64ch; margin-top: 8px; font-size: 15px; }
+.selector-escenario { display: flex; flex-direction: column; gap: 4px; min-width: min(100%, 300px); }
+
+/* Controles de formulario */
+label, .etiqueta { font-size: 12px; font-weight: 500; color: var(--tinta-2); }
+select, input[type="number"], input[type="text"], textarea {
+  font: inherit;
+  color: var(--tinta);
+  background: var(--superficie);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 4px;
+  padding: 6px 8px;
+  width: 100%;
+  min-width: 0;
+}
+input[type="number"], textarea, input.dato { font-family: var(--f-dato); font-size: 13px; }
+input:disabled { background: var(--pozo); color: var(--tinta-3); }
+button {
+  font: inherit;
+  font-weight: 500;
+  color: var(--tinta);
+  background: var(--superficie);
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 4px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--sim); }
+button:disabled { color: var(--tinta-3); cursor: not-allowed; opacity: 0.6; }
+button.principal { background: var(--sim); border-color: var(--sim); color: var(--sobre-sim); font-weight: 600; min-width: 96px; }
+button.menor { padding: 5px 10px; font-size: 13px; }
+:is(button, select, input, textarea, [tabindex]):focus-visible { outline: 2px solid var(--sim); outline-offset: 2px; }
+
+/* Superficies */
+.tarjeta { background: var(--superficie); border: 1px solid var(--linea); border-radius: 6px; padding: 16px; min-width: 0; }
+.tarjeta > header { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.tarjeta > header p { color: var(--tinta-2); font-size: 13px; }
+.chapa {
+  display: inline-block;
+  font-family: var(--f-dato);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--sim-suave);
+  color: var(--tinta);
+  white-space: nowrap;
+}
+
+/* Escena: diagrama de bloques */
+.escena { padding: 0; overflow: hidden; }
+.lienzo { overflow-x: auto; background: var(--pozo); border-bottom: 1px solid var(--linea); }
+
+.transporte { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.botones { display: flex; flex-wrap: wrap; gap: 8px; }
+.velocidad { display: flex; flex-direction: column; gap: 2px; min-width: 200px; flex: 1 1 200px; max-width: 320px; }
+.velocidad input { width: 100%; accent-color: var(--sim); }
+.reloj { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; min-width: 0; }
+.reloj-valor { font-family: var(--f-dato); font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.avance-horizonte { height: 3px; background: var(--linea); }
+.avance-horizonte > div { height: 100%; width: 0; background: var(--sim); }
+
+/* Banco: parámetros y motor */
+.banco { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .banco { grid-template-columns: minmax(0, 1fr); } }
+.grupos { display: flex; flex-direction: column; gap: 16px; }
+fieldset { border: 0; border-top: 1px solid var(--linea); margin: 0; padding: 12px 0 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+fieldset:first-of-type { border-top: 0; padding-top: 0; }
+legend { padding: 0; float: left; width: 100%; font-family: var(--f-titulo); font-weight: 600; font-size: 12px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--tinta-2); }
+fieldset.resaltado legend { color: var(--sim); }
+.campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; clear: both; }
+.campo { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.campo.ancho { grid-column: 1 / -1; }
+.resumen-dist { font-family: var(--f-dato); font-size: 12px; color: var(--tinta-2); }
+.vista-dist { display: block; width: 100%; height: 54px; }
+.vista-dist .barra { fill: var(--sim); opacity: 0.55; }
+.vista-dist .media { stroke: var(--tinta); stroke-width: 1.5; }
+.vista-dist text { font-family: var(--f-dato); font-size: 10px; fill: var(--tinta-3); }
+.error { color: var(--critico-texto); font-size: 13px; }
+.casilla { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta); }
+.casilla input { accent-color: var(--sim); width: 16px; height: 16px; margin: 0; }
+.fila-linea { display: flex; gap: 8px; align-items: flex-end; }
+.fila-linea > .campo { flex: 1 1 0; }
+.medidor { display: flex; flex-direction: column; gap: 4px; }
+.medidor-pista { height: 8px; border-radius: 4px; background: var(--sim-suave); position: relative; overflow: hidden; }
+.medidor-relleno { height: 100%; width: 0; background: var(--sim); border-radius: 4px; }
+.medidor-marca { position: absolute; top: 0; bottom: 0; left: 66.667%; width: 2px; background: var(--tinta-2); }
+.medidor[data-nivel="alerta"] .medidor-relleno { background: var(--alerta); }
+.medidor[data-nivel="critico"] .medidor-relleno { background: var(--critico); }
+.medidor-texto { font-size: 13px; color: var(--tinta-2); }
+.medidor-texto strong { font-family: var(--f-dato); font-weight: 500; color: var(--tinta); }
+
+.motor { display: flex; flex-direction: column; gap: 16px; }
+.estado { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--linea); border: 1px solid var(--linea); border-radius: 4px; overflow: hidden; }
+.estado > div { background: var(--superficie); padding: 8px 10px; min-width: 0; }
+.estado .valor { font-family: var(--f-dato); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.subpanel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.subpanel > p { font-size: 13px; color: var(--tinta-2); }
+.desliza { overflow-x: auto; }
+.desliza.alto { max-height: 252px; overflow-y: auto; border: 1px solid var(--linea); border-radius: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 500; font-size: 12px; color: var(--tinta-3); padding: 5px 10px; border-bottom: 1px solid var(--linea-fuerte); white-space: nowrap; }
+td { padding: 5px 10px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+tr:last-child > td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-family: var(--f-dato); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.desliza.alto thead th { position: sticky; top: 0; background: var(--superficie); }
+tr.proximo > td { background: var(--sim-suave); }
+.tipo-evento { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tipo-evento::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tinta-3); flex: none; }
+.tipo-evento[data-tipo="llegada"]::before { background: var(--sim); }
+.tipo-evento[data-tipo="fin-servicio"]::before { background: var(--teo); border-radius: 1px; }
+.tipo-evento[data-tipo="fin-calentamiento"]::before { background: var(--tinta-3); border-radius: 0; transform: rotate(45deg); }
+
+/* Resultados */
+.resultados { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 20px; align-items: start; }
+@media (max-width: 900px) { .resultados { grid-template-columns: minmax(0, 1fr); } }
+.aviso { border-left: 3px solid var(--alerta); background: var(--pozo); padding: 8px 12px; font-size: 13px; color: var(--tinta); border-radius: 0 4px 4px 0; margin-bottom: 12px; }
+.clave { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--sim); vertical-align: middle; margin-right: 6px; }
+.clave.teo { border-top-color: var(--teo); }
+.clave.caja { height: 10px; border: 0; background: var(--sim); border-radius: 2px; }
+td.simbolo { font-family: var(--f-dato); color: var(--tinta-3); white-space: nowrap; }
+.dif { display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.dif .ok { color: var(--bien-texto); font-family: var(--f-ui); font-weight: 600; }
+.nota { font-size: 12.5px; color: var(--tinta-3); margin-top: 10px; max-width: 70ch; }
+.verificaciones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.verificaciones li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 12px; align-items: start; }
+.sello { font-size: 12px; font-weight: 600; white-space: nowrap; padding: 2px 0; }
+.sello[data-estado="bien"] { color: var(--bien-texto); }
+.sello[data-estado="falla"] { color: var(--critico-texto); }
+.sello[data-estado="pendiente"] { color: var(--tinta-3); }
+.verificaciones strong { font-weight: 600; display: block; }
+.verificaciones span.detalle { font-family: var(--f-dato); font-size: 12px; color: var(--tinta-2); overflow-wrap: anywhere; }
+
+/* Gráficos */
+.graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; }
+.grafico { position: relative; }
+.grafico svg { display: block; width: 100%; height: 210px; overflow: visible; }
+.grafico .eje { stroke: var(--linea-fuerte); stroke-width: 1; }
+.grafico .rejilla { stroke: var(--linea); stroke-width: 1; }
+.grafico text { font-family: var(--f-dato); font-size: 10.5px; fill: var(--tinta-3); }
+.grafico text.titulo-eje { font-family: var(--f-ui); font-size: 11px; }
+.grafico text.directa { fill: var(--tinta-2); font-size: 11px; paint-order: stroke; stroke: var(--superficie); stroke-width: 3px; stroke-linejoin: round; }
+.grafico .l-sim { fill: none; stroke: var(--sim); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.grafico .a-sim { fill: var(--sim); opacity: 0.1; stroke: none; }
+.grafico .l-teo { fill: none; stroke: var(--teo); stroke-width: 2; stroke-linecap: round; }
+.grafico .b-sim { fill: var(--sim); }
+.grafico .b-sim.activa { opacity: 0.75; }
+.grafico .punto { fill: var(--sim); stroke: var(--superficie); stroke-width: 2; }
+.grafico .marca-p { stroke: var(--tinta-2); stroke-width: 1; }
+.grafico .cruz { stroke: var(--tinta-2); stroke-width: 1; }
+.grafico .vacio { font-family: var(--f-ui); font-size: 13px; fill: var(--tinta-3); }
+.leyenda { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--tinta-2); margin-bottom: 4px; }
+.globo {
+  position: absolute; z-index: 2; pointer-events: none;
+  background: var(--tinta); color: var(--superficie);
+  font-size: 12px; line-height: 1.4; padding: 6px 9px; border-radius: 4px;
+  white-space: nowrap; transform: translate(-50%, -100%);
+}
+.globo strong { font-family: var(--f-dato); font-weight: 500; }
+.globo .clave { margin-right: 5px; }
+
+/* Escenario JSON y glosario */
+.cierre { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 20px; align-items: start; }
+#json-texto { height: 250px; resize: vertical; white-space: pre; }
+.acciones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.pie { color: var(--tinta-3); font-size: 12.5px; max-width: 80ch; }
+
+@media (max-width: 520px) {
+  h1 { font-size: 24px; }
+  .reloj { align-items: flex-start; }
+  .verificaciones li { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Applet 1: diagrama de bloques en SVG. Azul = simulado, naranja = teórico. */
+#diagrama { display: block; width: 100%; min-width: 760px; height: auto; }
+#diagrama text { font-family: var(--f-ui); fill: var(--tinta); }
+#diagrama .t-bloque { font-family: var(--f-titulo); font-weight: 600; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+#diagrama .t-sub { font-size: 11.5px; fill: var(--tinta-2); }
+#diagrama .t-dato { font-family: var(--f-dato); font-size: 12px; }
+#diagrama .t-cuenta { font-family: var(--f-dato); font-size: 12px; fill: var(--tinta-2); }
+#diagrama .bloque > rect.caja { fill: var(--superficie); stroke: var(--linea-fuerte); stroke-width: 1.5; }
+#diagrama .bloque[tabindex] { cursor: pointer; }
+#diagrama .bloque[tabindex]:hover > rect.caja, #diagrama .bloque[tabindex]:focus-visible > rect.caja { stroke: var(--sim); stroke-width: 2; }
+#diagrama .bloque:focus-visible { outline: none; }
+#diagrama .contenedor { fill: var(--pozo); stroke: var(--linea-fuerte); stroke-width: 1; stroke-dasharray: 4 3; }
+#diagrama .cable { fill: none; stroke: var(--tinta-2); stroke-width: 1.5; }
+#diagrama .punta { fill: var(--tinta-2); }
+#diagrama .puerto { fill: var(--superficie); stroke: var(--tinta-2); stroke-width: 1.5; }
+#diagrama .ranura { fill: none; stroke: var(--linea); stroke-width: 1; }
+#diagrama .barra-fondo { fill: var(--linea); }
+#diagrama .barra-avance { fill: var(--sim); }
+#capa-fichas { pointer-events: none; }
+#diagrama .ficha circle { fill: var(--sim); stroke: var(--superficie); stroke-width: 2; }
+#diagrama .ficha text { fill: var(--sobre-sim); font-family: var(--f-dato); font-size: 9.5px; font-weight: 500; text-anchor: middle; }
+#diagrama .ficha.rechazada circle { fill: var(--critico); }
+#diagrama .apagado { opacity: 0.35; }
+#diagrama .t-rechazo { fill: var(--critico-texto); }
+</style>
+</head>
+<body>
+<div class="pagina">
+
+  <header class="cabecera">
+    <div>
+      <p class="antetitulo">DES en la nube · Applet 1</p>
+      <h1>Un pod es una cola de un servidor</h1>
+      <p class="bajada">Cada petición es una entidad y el pod la atiende de a una. Elige las distribuciones, avanza evento por evento y compara lo simulado con la teoría de colas.</p>
+    </div>
+    <div class="selector-escenario">
+      <label for="preajuste">Escenario</label>
+      <select id="preajuste"></select>
+    </div>
+  </header>
+
+  <section class="tarjeta escena" aria-label="Diagrama de bloques del modelo">
+    <div class="lienzo">
+      <svg id="diagrama" viewBox="0 0 960 232" role="img" aria-label="Fuente de clientes, cola de espera, pod y respuestas, conectados en serie">
+        <!-- cables -->
+        <path class="cable" d="M174 104 H254"></path><path class="punta" d="M262 104 l-9 -4.5 v9 z"></path>
+        <path class="cable" d="M562 104 H632"></path><path class="punta" d="M640 104 l-9 -4.5 v9 z"></path>
+        <path class="cable" d="M812 104 H850"></path><path class="punta" d="M858 104 l-9 -4.5 v9 z"></path>
+        <g id="rama-rechazo">
+          <path class="cable" d="M218 104 V178"></path><path class="punta" d="M218 186 l-4.5 -9 h9 z"></path>
+          <circle class="puerto" cx="218" cy="104" r="3"></circle>
+          <g class="bloque"><rect class="caja" x="150" y="186" width="136" height="36" rx="3"></rect>
+            <text class="t-bloque t-rechazo" x="162" y="201">HTTP 503</text>
+            <text class="t-cuenta" x="162" y="215" id="d-rechazadas">rechazadas: 0</text></g>
+        </g>
+
+        <!-- fuente -->
+        <g class="bloque" id="b-fuente" tabindex="0" role="button" aria-label="Fuente de clientes: editar la distribución de llegadas">
+          <rect class="caja" x="24" y="52" width="150" height="104" rx="3"></rect>
+          <text class="t-bloque" x="36" y="74">Clientes</text>
+          <text class="t-sub" x="36" y="92">tiempo entre llegadas</text>
+          <text class="t-dato" x="36" y="110" id="d-dist-llegadas">Exp(100)</text>
+          <text class="t-dato" x="36" y="126" id="d-lambda">λ = 10 req/s</text>
+          <text class="t-cuenta" x="36" y="146" id="d-llegadas">llegadas: 0</text>
+          <circle class="puerto" cx="174" cy="104" r="4"></circle>
+        </g>
+
+        <!-- cola -->
+        <g class="bloque" id="b-cola" tabindex="0" role="button" aria-label="Cola de espera: editar su capacidad">
+          <rect class="caja" x="262" y="52" width="300" height="104" rx="3"></rect>
+          <text class="t-bloque" x="274" y="74">Cola de espera</text>
+          <text class="t-sub" x="274" y="92" id="d-cola-tipo">FIFO · sin límite</text>
+          <text class="t-cuenta" x="550" y="74" text-anchor="end" id="d-en-cola">en cola: 0</text>
+          <g id="ranuras"></g>
+          <circle class="puerto" cx="262" cy="104" r="4"></circle>
+          <circle class="puerto" cx="562" cy="104" r="4"></circle>
+        </g>
+
+        <!-- pod -->
+        <g class="bloque" id="b-pod" tabindex="0" role="button" aria-label="Pod: editar la distribución del tiempo de servicio">
+          <rect class="caja" x="640" y="22" width="172" height="164" rx="3"></rect>
+          <text class="t-bloque" x="652" y="44">Pod</text>
+          <text class="t-cuenta" x="800" y="44" text-anchor="end" id="d-pod-estado">libre</text>
+          <rect class="contenedor" x="652" y="54" width="148" height="88" rx="3"></rect>
+          <text class="t-sub" x="660" y="70">contenedor</text>
+          <rect class="barra-fondo" x="664" y="126" width="124" height="5" rx="2.5"></rect>
+          <rect class="barra-avance" id="d-avance" x="664" y="126" width="0" height="5" rx="2.5"></rect>
+          <text class="t-sub" x="652" y="160">tiempo de servicio</text>
+          <text class="t-dato" x="652" y="176" id="d-dist-servicio">Exp(80)</text>
+          <circle class="puerto" cx="640" cy="104" r="4"></circle>
+          <circle class="puerto" cx="812" cy="104" r="4"></circle>
+        </g>
+
+        <!-- sumidero -->
+        <g class="bloque">
+          <rect class="caja" x="858" y="66" width="94" height="76" rx="3"></rect>
+          <text class="t-bloque" x="870" y="88">HTTP 200</text>
+          <text class="t-sub" x="870" y="106">atendidas</text>
+          <text class="t-dato" x="870" y="126" id="d-atendidas">0</text>
+          <circle class="puerto" cx="858" cy="104" r="4"></circle>
+        </g>
+
+        <g id="capa-fichas"></g>
+      </svg>
+    </div>
+    <div class="avance-horizonte" aria-hidden="true"><div id="avance-horizonte"></div></div>
+    <div class="transporte">
+      <div class="botones">
+        <button type="button" class="principal" id="btn-correr">Correr</button>
+        <button type="button" id="btn-paso">Un evento</button>
+        <button type="button" id="btn-final">Hasta el final</button>
+        <button type="button" id="btn-reiniciar">Reiniciar</button>
+      </div>
+      <div class="velocidad">
+        <label for="velocidad">Velocidad de la animación: <span id="velocidad-texto"></span></label>
+        <input type="range" id="velocidad" min="0" max="6" step="1" value="2">
+      </div>
+      <div class="reloj" aria-live="off">
+        <span class="etiqueta">Reloj de simulación</span>
+        <span class="reloj-valor" id="reloj-valor">0 ms</span>
+        <span class="tenue" id="reloj-detalle">0 eventos · horizonte 3 600 s</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="banco">
+    <section class="tarjeta" aria-labelledby="t-param">
+      <header><h2 id="t-param">Modelo de entrada</h2><p>Cambiar un valor reinicia la corrida.</p></header>
+      <div class="grupos">
+        <fieldset id="fs-llegadas">
+          <legend>Llegadas · bloque Clientes</legend>
+          <div class="campos">
+            <div class="campo ancho"><label for="lleg-tipo">Distribución del tiempo entre llegadas</label><select id="lleg-tipo"></select></div>
+          </div>
+          <div class="campos" id="lleg-params"></div>
+          <svg class="vista-dist" id="lleg-vista" aria-hidden="true"></svg>
+          <p class="resumen-dist" id="lleg-resumen"></p>
+          <p class="error" id="lleg-error" hidden></p>
+        </fieldset>
+        <fieldset id="fs-servicio">
+          <legend>Servicio · bloque Pod</legend>
+          <div class="campos">
+            <div class="campo ancho"><label for="serv-tipo">Distribución del tiempo de servicio</label><select id="serv-tipo"></select></div>
+          </div>
+          <div class="campos" id="serv-params"></div>
+          <svg class="vista-dist" id="serv-vista" aria-hidden="true"></svg>
+          <p class="resumen-dist" id="serv-resumen"></p>
+          <p class="error" id="serv-error" hidden></p>
+        </fieldset>
+        <fieldset id="fs-corrida">
+          <legend>Cola y corrida</legend>
+          <div class="medidor" id="medidor-carga" data-nivel="normal">
+            <div class="medidor-pista"><div class="medidor-relleno" id="medidor-relleno"></div><div class="medidor-marca" title="ρ = 1"></div></div>
+            <p class="medidor-texto" id="medidor-texto"></p>
+          </div>
+          <label class="casilla" for="cola-limitada"><input type="checkbox" id="cola-limitada"> Limitar la cola y rechazar lo que no quepa</label>
+          <div class="campos">
+            <div class="campo"><label for="cola-capacidad">Puestos en la cola</label><input type="number" id="cola-capacidad" min="0" step="1" value="4" disabled></div>
+            <div class="campo"><label for="horizonte">Duración simulada (s)</label><input type="number" id="horizonte" min="0" step="any"></div>
+            <div class="campo"><label for="calentamiento">Calentamiento (s)</label><input type="number" id="calentamiento" min="0" step="any"></div>
+          </div>
+          <div class="fila-linea">
+            <div class="campo"><label for="semilla">Semilla</label><input type="number" id="semilla" min="0" max="4294967295" step="1"></div>
+            <button type="button" id="btn-semilla">Otra semilla</button>
+          </div>
+          <p class="error" id="corrida-error" hidden></p>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="tarjeta motor" aria-labelledby="t-motor">
+      <header><h2 id="t-motor">El motor por dentro</h2><p>Saca el evento más próximo, adelanta el reloj y ejecuta su efecto.</p></header>
+      <div class="estado">
+        <div><span class="etiqueta">En el sistema</span><div class="valor" id="e-sistema">0</div></div>
+        <div><span class="etiqueta">En cola</span><div class="valor" id="e-cola">0</div></div>
+        <div><span class="etiqueta">Pod</span><div class="valor" id="e-pod">libre</div></div>
+      </div>
+      <div class="subpanel">
+        <h3>Lista de eventos futuros</h3>
+        <div class="desliza">
+          <table aria-label="Lista de eventos futuros">
+            <thead><tr><th class="num">Instante (ms)</th><th>Evento</th><th class="num">Petición</th><th class="num">Faltan (ms)</th></tr></thead>
+            <tbody id="tabla-lista"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="subpanel">
+        <h3>Bitácora de eventos ejecutados</h3>
+        <div class="desliza alto">
+          <table aria-label="Bitácora de eventos ejecutados">
+            <thead><tr><th class="num">Instante (ms)</th><th>Evento</th><th>Qué cambió</th><th class="num">N</th></tr></thead>
+            <tbody id="tabla-bitacora"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="resultados">
+    <section class="tarjeta" aria-labelledby="t-res">
+      <header>
+        <h2 id="t-res">Simulación frente a teoría</h2>
+        <p><span class="chapa" id="kendall">M/M/1</span> <span id="teoria-nombre"></span></p>
+      </header>
+      <p class="aviso" id="teoria-nota" hidden></p>
+      <div class="desliza">
+        <table aria-label="Indicadores simulados y teóricos">
+          <thead><tr><th>Indicador</th><th></th><th class="num"><span class="clave"></span>Simulado</th><th class="num"><span class="clave teo"></span>Teórico</th><th class="num">Diferencia</th></tr></thead>
+          <tbody id="tabla-metricas"></tbody>
+        </table>
+      </div>
+      <p class="nota" id="metricas-nota"></p>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="t-ver">
+      <header><h2 id="t-ver">Verificación en vivo</h2></header>
+      <ul class="verificaciones" id="verificaciones"></ul>
+    </section>
+  </div>
+
+  <div class="graficos">
+    <section class="tarjeta" aria-labelledby="t-g1">
+      <header><h2 id="t-g1">Peticiones en el sistema</h2><p>Últimos cambios de estado</p></header>
+      <div class="leyenda"><span><span class="clave"></span>N(t) simulado</span><span id="ley-g1-teo"><span class="clave teo"></span>L teórico</span></div>
+      <div class="grafico" id="g-n"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-g2">
+      <header><h2 id="t-g2">Convergencia del tiempo de respuesta</h2><p>Media acumulada, en ms</p></header>
+      <div class="leyenda"><span><span class="clave"></span>Media simulada</span><span id="ley-g2-teo"><span class="clave teo"></span>W teórico</span></div>
+      <div class="grafico" id="g-w"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-g3">
+      <header><h2 id="t-g3">Distribución del tiempo de respuesta</h2><p>Hasta el percentil 99</p></header>
+      <div class="leyenda"><span><span class="clave caja"></span>Peticiones simuladas</span><span id="ley-g3-teo"><span class="clave teo"></span>Densidad teórica</span></div>
+      <div class="grafico" id="g-h"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+  </div>
+
+  <div class="cierre">
+    <section class="tarjeta" aria-labelledby="t-json">
+      <header><h2 id="t-json">Escenario en JSON</h2><p>Con este texto y la semilla, cualquiera repite la corrida.</p></header>
+      <label for="json-texto">Definición del escenario</label>
+      <textarea id="json-texto" spellcheck="false"></textarea>
+      <div class="acciones">
+        <button type="button" id="btn-json-aplicar">Aplicar este JSON</button>
+        <button type="button" id="btn-json-copiar">Copiar</button>
+        <span class="tenue" id="json-estado" role="status"></span>
+      </div>
+      <p class="error" id="json-error" hidden></p>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-glos">
+      <header><h2 id="t-glos">De Kubernetes al modelo</h2></header>
+      <div class="desliza">
+        <table>
+          <thead><tr><th>En el clúster</th><th>En la simulación</th></tr></thead>
+          <tbody>
+            <tr><td>Petición HTTP</td><td>Entidad que recorre el sistema</td></tr>
+            <tr><td>Pod con un contenedor</td><td>Servidor: atiende una petición a la vez</td></tr>
+            <tr><td>Peticiones esperando</td><td>Cola en orden de llegada (FIFO)</td></tr>
+            <tr><td>Cola llena, respuesta 503</td><td>Capacidad finita: la entidad se rechaza</td></tr>
+            <tr><td>Uso de CPU del contenedor</td><td>Utilización ρ: fracción del tiempo ocupado</td></tr>
+            <tr><td>Latencia p95 del servicio</td><td>Percentil 95 del tiempo de respuesta</td></tr>
+            <tr><td>Peticiones por segundo</td><td>Tasa de llegadas λ y rendimiento X</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">En los applets siguientes el pod se multiplica en réplicas, aparecen los nodos con sus requests y limits, y el HPA cambia el número de servidores durante la corrida.</p>
+    </section>
+  </div>
+
+  <p class="pie">Motor de eventos discretos propio, en JavaScript: corre en el navegador, sin servidor ni instalación. Los tiempos están en milisegundos y las tasas en peticiones por segundo.</p>
+</div>
+<script>
+(() => {
+'use strict';
+// ---- src/motor/aleatorio.js ----
+// Generador pseudoaleatorio con semilla y flujos independientes por nombre.
+//
+// Por qué no Math.random(): no admite semilla, así que una corrida no se puede
+// repetir. Aquí la misma semilla produce siempre la misma secuencia, y cada
+// fuente de azar del modelo (llegadas, servicio, ...) usa su propio flujo.
+// Con flujos separados, cambiar la distribución del servicio no altera los
+// instantes de llegada: es la técnica de números aleatorios comunes.
+
+/** Hash FNV-1a de 32 bits para convertir un nombre de flujo en un entero. */
+function hashTexto(texto) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) {
+    h ^= texto.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** Mezclador de 32 bits (finalizador de splitmix32). */
+function mezclar32(x) {
+  x = (x + 0x9e3779b9) | 0;
+  let t = x ^ (x >>> 16);
+  t = Math.imul(t, 0x21f0aaad);
+  t ^= t >>> 15;
+  t = Math.imul(t, 0x735a2d97);
+  return (t ^ (t >>> 15)) >>> 0;
+}
+
+/** Generador sfc32 (Small Fast Counting, 32 bits). */
+class Aleatorio {
+  constructor(semilla = 1) {
+    this.semilla = semilla >>> 0;
+    this.a = mezclar32(this.semilla);
+    this.b = mezclar32(this.a);
+    this.c = mezclar32(this.b);
+    this.d = 1;
+    for (let i = 0; i < 15; i++) this.entero(); // descarta el arranque
+  }
+
+  /** Entero uniforme en [0, 2^32). */
+  entero() {
+    const t = (((this.a + this.b) | 0) + this.d) | 0;
+    this.d = (this.d + 1) | 0;
+    this.a = this.b ^ (this.b >>> 9);
+    this.b = (this.c + (this.c << 3)) | 0;
+    this.c = (this.c << 21) | (this.c >>> 11);
+    this.c = (this.c + t) | 0;
+    return t >>> 0;
+  }
+
+  /** Uniforme en el intervalo abierto (0, 1): nunca devuelve 0 ni 1. */
+  uniforme() {
+    return (this.entero() + 0.5) / 4294967296;
+  }
+
+  /** Flujo independiente y reproducible, identificado por nombre. */
+  flujo(nombre) {
+    return new Aleatorio(mezclar32(this.semilla ^ hashTexto(nombre)));
+  }
+}
+
+
+// ---- src/motor/distribuciones.js ----
+// Distribuciones de probabilidad para tiempos (entre llegadas, de servicio, ...).
+//
+// Una distribución se describe con un objeto plano, que es lo que se guarda en
+// el JSON del escenario:   { "tipo": "exponencial", "media": 100 }
+// crearDistribucion(espec) la valida y devuelve un objeto con:
+//   media, varianza, cv2 (coeficiente de variación al cuadrado),
+//   kendall (letra de la notación de Kendall) y muestrear(rng).
+
+/** Función gamma (aproximación de Lanczos), necesaria para la Weibull. */
+function gamma(z) {
+  if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * gamma(1 - z));
+  z -= 1;
+  const g = 7;
+  const c = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+  ];
+  let x = c[0];
+  for (let i = 1; i < g + 2; i++) x += c[i] / (z + i);
+  const t = z + g + 0.5;
+  return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+}
+
+/** Catálogo: lo usa la interfaz para dibujar los formularios. */
+const CATALOGO = {
+  exponencial: {
+    etiqueta: 'Exponencial',
+    params: [{ id: 'media', etiqueta: 'Media', unidad: 'tiempo', min: 0 }],
+  },
+  constante: {
+    etiqueta: 'Constante (determinista)',
+    params: [{ id: 'valor', etiqueta: 'Valor', unidad: 'tiempo', min: 0 }],
+  },
+  uniforme: {
+    etiqueta: 'Uniforme',
+    params: [
+      { id: 'min', etiqueta: 'Mínimo', unidad: 'tiempo', min: 0 },
+      { id: 'max', etiqueta: 'Máximo', unidad: 'tiempo', min: 0 },
+    ],
+  },
+  triangular: {
+    etiqueta: 'Triangular',
+    params: [
+      { id: 'min', etiqueta: 'Mínimo', unidad: 'tiempo', min: 0 },
+      { id: 'moda', etiqueta: 'Moda', unidad: 'tiempo', min: 0 },
+      { id: 'max', etiqueta: 'Máximo', unidad: 'tiempo', min: 0 },
+    ],
+  },
+  erlang: {
+    etiqueta: 'Erlang-k',
+    params: [
+      { id: 'k', etiqueta: 'Fases k', unidad: '', min: 1, entero: true },
+      { id: 'media', etiqueta: 'Media', unidad: 'tiempo', min: 0 },
+    ],
+  },
+  lognormal: {
+    etiqueta: 'Lognormal',
+    params: [
+      { id: 'media', etiqueta: 'Media', unidad: 'tiempo', min: 0 },
+      { id: 'cv', etiqueta: 'Coef. de variación', unidad: '', min: 0 },
+    ],
+  },
+  weibull: {
+    etiqueta: 'Weibull',
+    params: [
+      { id: 'forma', etiqueta: 'Forma k', unidad: '', min: 0 },
+      { id: 'escala', etiqueta: 'Escala', unidad: 'tiempo', min: 0 },
+    ],
+  },
+  empirica: {
+    etiqueta: 'Empírica (datos medidos)',
+    params: [{ id: 'valores', etiqueta: 'Valores separados por coma', unidad: 'lista' }],
+  },
+};
+
+function exigir(condicion, mensaje) {
+  if (!condicion) throw new Error(mensaje);
+}
+
+function esNumero(x) {
+  return typeof x === 'number' && Number.isFinite(x);
+}
+
+/** Valida una especificación y construye la distribución. */
+function crearDistribucion(espec) {
+  exigir(espec && typeof espec === 'object', 'La distribución debe ser un objeto con el campo "tipo".');
+  const tipo = espec.tipo;
+  exigir(Object.prototype.hasOwnProperty.call(CATALOGO, tipo), `Distribución desconocida: "${tipo}".`);
+  let d;
+
+  switch (tipo) {
+    case 'exponencial': {
+      const { media } = espec;
+      exigir(esNumero(media) && media > 0, 'Exponencial: la media debe ser mayor que 0.');
+      d = {
+        media,
+        varianza: media * media,
+        kendall: 'M',
+        muestrear: (rng) => -media * Math.log(rng.uniforme()),
+      };
+      break;
+    }
+    case 'constante': {
+      const { valor } = espec;
+      exigir(esNumero(valor) && valor > 0, 'Constante: el valor debe ser mayor que 0.');
+      d = { media: valor, varianza: 0, kendall: 'D', muestrear: () => valor };
+      break;
+    }
+    case 'uniforme': {
+      const { min, max } = espec;
+      exigir(esNumero(min) && esNumero(max), 'Uniforme: mínimo y máximo deben ser números.');
+      exigir(min >= 0, 'Uniforme: el mínimo no puede ser negativo.');
+      exigir(max > min, 'Uniforme: el máximo debe ser mayor que el mínimo.');
+      d = {
+        media: (min + max) / 2,
+        varianza: ((max - min) * (max - min)) / 12,
+        kendall: 'G',
+        muestrear: (rng) => min + (max - min) * rng.uniforme(),
+      };
+      break;
+    }
+    case 'triangular': {
+      const { min: a, moda: c, max: b } = espec;
+      exigir(esNumero(a) && esNumero(b) && esNumero(c), 'Triangular: mínimo, moda y máximo deben ser números.');
+      exigir(a >= 0, 'Triangular: el mínimo no puede ser negativo.');
+      exigir(b > a, 'Triangular: el máximo debe ser mayor que el mínimo.');
+      exigir(c >= a && c <= b, 'Triangular: la moda debe estar entre el mínimo y el máximo.');
+      const corte = (c - a) / (b - a);
+      d = {
+        media: (a + b + c) / 3,
+        varianza: (a * a + b * b + c * c - a * b - a * c - b * c) / 18,
+        kendall: 'G',
+        muestrear: (rng) => {
+          const u = rng.uniforme();
+          return u < corte
+            ? a + Math.sqrt(u * (b - a) * (c - a))
+            : b - Math.sqrt((1 - u) * (b - a) * (b - c));
+        },
+      };
+      break;
+    }
+    case 'erlang': {
+      const { k, media } = espec;
+      exigir(Number.isInteger(k) && k >= 1, 'Erlang: k debe ser un entero mayor o igual a 1.');
+      exigir(esNumero(media) && media > 0, 'Erlang: la media debe ser mayor que 0.');
+      const mediaFase = media / k;
+      d = {
+        media,
+        varianza: (media * media) / k,
+        kendall: k === 1 ? 'M' : `E${k}`,
+        // Suma de k exponenciales: -mediaFase * ln(U1 * U2 * ... * Uk)
+        muestrear: (rng) => {
+          let suma = 0;
+          for (let i = 0; i < k; i++) suma -= Math.log(rng.uniforme());
+          return mediaFase * suma;
+        },
+      };
+      break;
+    }
+    case 'lognormal': {
+      const { media, cv } = espec;
+      exigir(esNumero(media) && media > 0, 'Lognormal: la media debe ser mayor que 0.');
+      exigir(esNumero(cv) && cv > 0, 'Lognormal: el coeficiente de variación debe ser mayor que 0.');
+      const sigma2 = Math.log(1 + cv * cv);
+      const sigma = Math.sqrt(sigma2);
+      const mu = Math.log(media) - sigma2 / 2;
+      d = {
+        media,
+        varianza: cv * cv * media * media,
+        kendall: 'G',
+        // Normal estándar por Box-Muller (consume dos uniformes por muestra).
+        muestrear: (rng) => {
+          const u1 = rng.uniforme();
+          const u2 = rng.uniforme();
+          const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+          return Math.exp(mu + sigma * z);
+        },
+      };
+      break;
+    }
+    case 'weibull': {
+      const { forma, escala } = espec;
+      exigir(esNumero(forma) && forma > 0, 'Weibull: la forma debe ser mayor que 0.');
+      exigir(esNumero(escala) && escala > 0, 'Weibull: la escala debe ser mayor que 0.');
+      const g1 = gamma(1 + 1 / forma);
+      const g2 = gamma(1 + 2 / forma);
+      d = {
+        media: escala * g1,
+        varianza: escala * escala * (g2 - g1 * g1),
+        kendall: forma === 1 ? 'M' : 'G',
+        muestrear: (rng) => escala * Math.pow(-Math.log(rng.uniforme()), 1 / forma),
+      };
+      break;
+    }
+    case 'empirica': {
+      const { valores } = espec;
+      exigir(Array.isArray(valores) && valores.length >= 1, 'Empírica: se necesita al menos un valor.');
+      exigir(valores.every((v) => esNumero(v) && v >= 0), 'Empírica: todos los valores deben ser números no negativos.');
+      const n = valores.length;
+      const media = valores.reduce((s, v) => s + v, 0) / n;
+      exigir(media > 0, 'Empírica: la media de los valores debe ser mayor que 0.');
+      const varianza = valores.reduce((s, v) => s + (v - media) * (v - media), 0) / n;
+      d = {
+        media,
+        varianza,
+        kendall: varianza === 0 ? 'D' : 'G',
+        // Remuestreo: cada valor medido tiene la misma probabilidad.
+        muestrear: (rng) => valores[Math.min(n - 1, Math.floor(rng.uniforme() * n))],
+      };
+      break;
+    }
+  }
+
+  d.tipo = tipo;
+  d.espec = espec;
+  d.cv2 = d.varianza / (d.media * d.media);
+  d.esExponencial = d.kendall === 'M';
+  d.esDeterminista = d.varianza === 0;
+  return d;
+}
+
+/** Especificación por defecto de un tipo, conservando la media indicada. */
+function especPorDefecto(tipo, media = 100) {
+  const m = media;
+  const r = (x) => Math.round(x * 1000) / 1000;
+  switch (tipo) {
+    case 'exponencial': return { tipo, media: r(m) };
+    case 'constante': return { tipo, valor: r(m) };
+    case 'uniforme': return { tipo, min: r(0.5 * m), max: r(1.5 * m) };
+    case 'triangular': return { tipo, min: r(0.4 * m), moda: r(0.8 * m), max: r(1.8 * m) };
+    case 'erlang': return { tipo, k: 4, media: r(m) };
+    case 'lognormal': return { tipo, media: r(m), cv: 1.5 };
+    case 'weibull': return { tipo, forma: 1.5, escala: r(m / gamma(1 + 1 / 1.5)) };
+    case 'empirica': return { tipo, valores: [0.4, 0.6, 0.8, 0.9, 1.0, 1.1, 1.3, 1.9].map((f) => r(f * m)) };
+    default: throw new Error(`Distribución desconocida: "${tipo}".`);
+  }
+}
+
+/** Texto corto para mostrar en un bloque, p. ej. "Exp(100)". */
+function resumenDistribucion(espec) {
+  const n = (x) => String(Math.round(x * 100) / 100).replace('.', ',');
+  switch (espec.tipo) {
+    case 'exponencial': return `Exp(${n(espec.media)})`;
+    case 'constante': return `Const(${n(espec.valor)})`;
+    case 'uniforme': return `U(${n(espec.min)}; ${n(espec.max)})`;
+    case 'triangular': return `Tri(${n(espec.min)}; ${n(espec.moda)}; ${n(espec.max)})`;
+    case 'erlang': return `Erlang-${espec.k}(${n(espec.media)})`;
+    case 'lognormal': return `LogN(${n(espec.media)}; CV ${n(espec.cv)})`;
+    case 'weibull': return `Weibull(${n(espec.forma)}; ${n(espec.escala)})`;
+    case 'empirica': return `Empírica (${espec.valores.length} datos)`;
+    default: return String(espec.tipo);
+  }
+}
+
+
+// ---- src/motor/lista-eventos.js ----
+// Lista de eventos futuros (FEL, future event list) como montículo binario.
+//
+// Orden de salida: primero el menor tiempo; si hay empate, la menor prioridad;
+// si persiste, el que se agendó antes. El desempate es determinista a
+// propósito: sin él, dos corridas con la misma semilla podrían diferir.
+
+function antes(a, b) {
+  if (a.t !== b.t) return a.t < b.t;
+  if (a.prioridad !== b.prioridad) return a.prioridad < b.prioridad;
+  return a.sec < b.sec;
+}
+
+class ListaEventos {
+  constructor() {
+    this.monton = [];
+    this.secuencia = 0;
+  }
+
+  get tamano() {
+    return this.monton.length;
+  }
+
+  insertar(evento) {
+    evento.sec = this.secuencia++;
+    const h = this.monton;
+    h.push(evento);
+    let i = h.length - 1;
+    while (i > 0) {
+      const padre = (i - 1) >> 1;
+      if (!antes(h[i], h[padre])) break;
+      [h[i], h[padre]] = [h[padre], h[i]];
+      i = padre;
+    }
+    return evento;
+  }
+
+  /** Mira el próximo evento sin sacarlo. */
+  proximo() {
+    return this.monton.length ? this.monton[0] : null;
+  }
+
+  /** Saca y devuelve el próximo evento. */
+  extraer() {
+    const h = this.monton;
+    if (h.length === 0) return null;
+    const primero = h[0];
+    const ultimo = h.pop();
+    if (h.length > 0) {
+      h[0] = ultimo;
+      let i = 0;
+      for (;;) {
+        const izq = 2 * i + 1;
+        const der = izq + 1;
+        let menor = i;
+        if (izq < h.length && antes(h[izq], h[menor])) menor = izq;
+        if (der < h.length && antes(h[der], h[menor])) menor = der;
+        if (menor === i) break;
+        [h[i], h[menor]] = [h[menor], h[i]];
+        i = menor;
+      }
+    }
+    return primero;
+  }
+
+  /** Copia ordenada, para mostrarla en pantalla. No modifica la lista. */
+  ordenados() {
+    return this.monton.filter((e) => !e.cancelado).sort((a, b) => (antes(a, b) ? -1 : 1));
+  }
+}
+
+
+// ---- src/motor/estadisticas.js ----
+// Acumuladores estadísticos del motor.
+//
+// Hay dos clases de promedio en una simulación de eventos discretos:
+//  - por observación (un dato por petición): tiempo de respuesta, espera...
+//  - ponderado por tiempo (una variable de estado que cambia a saltos):
+//    número en el sistema, número en cola, servidor ocupado...
+// Confundirlos es uno de los errores más comunes al depurar un modelo.
+
+/** Percentil p (0..1) de un arreglo ya ordenado, con interpolación lineal. */
+function percentil(ordenado, p) {
+  const n = ordenado.length;
+  if (n === 0) return NaN;
+  const pos = (n - 1) * p;
+  const i = Math.floor(pos);
+  const frac = pos - i;
+  return i + 1 < n ? ordenado[i] + frac * (ordenado[i + 1] - ordenado[i]) : ordenado[i];
+}
+
+/** Promedio por observación (algoritmo de Welford) con muestras guardadas. */
+class Acumulador {
+  constructor({ guardarMuestras = true } = {}) {
+    this.guardar = guardarMuestras;
+    this.reiniciar();
+  }
+
+  reiniciar() {
+    this.n = 0;
+    this.media = 0;
+    this.m2 = 0;
+    this.min = Infinity;
+    this.max = -Infinity;
+    this.datos = this.guardar ? new Float64Array(1024) : null;
+  }
+
+  agregar(x) {
+    if (this.guardar) {
+      if (this.n === this.datos.length) {
+        const mayor = new Float64Array(this.datos.length * 2);
+        mayor.set(this.datos);
+        this.datos = mayor;
+      }
+      this.datos[this.n] = x;
+    }
+    this.n++;
+    const delta = x - this.media;
+    this.media += delta / this.n;
+    this.m2 += delta * (x - this.media);
+    if (x < this.min) this.min = x;
+    if (x > this.max) this.max = x;
+  }
+
+  get varianza() {
+    return this.n > 1 ? this.m2 / (this.n - 1) : NaN;
+  }
+
+  get desviacion() {
+    return Math.sqrt(this.varianza);
+  }
+
+  /** Copia ordenada de las muestras. */
+  ordenadas() {
+    return this.datos.slice(0, this.n).sort();
+  }
+}
+
+/** Promedio ponderado por tiempo de una variable que cambia a saltos. */
+class PromedioTemporal {
+  constructor(t0 = 0, valor = 0) {
+    this.reiniciar(t0, valor);
+  }
+
+  reiniciar(t0, valor = this.valor) {
+    this.t0 = t0;
+    this.tUltimo = t0;
+    this.valor = valor;
+    this.area = 0;
+    this.maximo = valor;
+  }
+
+  /** La variable pasa a valer `valor` en el instante t. */
+  actualizar(t, valor) {
+    this.area += this.valor * (t - this.tUltimo);
+    this.tUltimo = t;
+    this.valor = valor;
+    if (valor > this.maximo) this.maximo = valor;
+  }
+
+  /** Promedio temporal entre t0 y t. */
+  media(t) {
+    const duracion = t - this.t0;
+    if (duracion <= 0) return NaN;
+    return (this.area + this.valor * (t - this.tUltimo)) / duracion;
+  }
+}
+
+
+// ---- src/motor/simulador.js ----
+// Núcleo del simulador de eventos discretos.
+//
+// El ciclo es siempre el mismo, sea cual sea el modelo:
+//   1. sacar de la lista el evento más próximo,
+//   2. adelantar el reloj hasta su instante,
+//   3. ejecutar su manejador, que cambia el estado y agenda eventos nuevos.
+// El motor no sabe nada de pods ni de colas: eso lo aporta cada modelo.
+
+
+class Simulador {
+  constructor({ semilla = 1 } = {}) {
+    this.semilla = semilla >>> 0;
+    this.reloj = 0;
+    this.lista = new ListaEventos();
+    this.raiz = new Aleatorio(this.semilla);
+    this.flujos = new Map();
+    this.manejadores = new Map();
+    this.eventosEjecutados = 0;
+    this.huellaNum = 0x811c9dc5;
+  }
+
+  /** Flujo de números aleatorios propio de una fuente de azar del modelo. */
+  flujo(nombre) {
+    if (!this.flujos.has(nombre)) this.flujos.set(nombre, this.raiz.flujo(nombre));
+    return this.flujos.get(nombre);
+  }
+
+  /** Registra la función que atiende un tipo de evento. */
+  en(tipo, manejador) {
+    this.manejadores.set(tipo, manejador);
+  }
+
+  /** Agenda un evento dentro de `retraso` unidades de tiempo. */
+  agendar(retraso, tipo, datos = {}, prioridad = 0) {
+    if (!(retraso >= 0) || !Number.isFinite(retraso)) {
+      throw new Error(`No se puede agendar "${tipo}" con retraso ${retraso}.`);
+    }
+    if (!this.manejadores.has(tipo)) {
+      throw new Error(`No hay manejador para el evento "${tipo}".`);
+    }
+    return this.lista.insertar({ t: this.reloj + retraso, tipo, datos, prioridad, cancelado: false });
+  }
+
+  /** Marca un evento para que se descarte cuando le llegue el turno. */
+  cancelar(evento) {
+    evento.cancelado = true;
+  }
+
+  /** Próximo evento vigente, sin ejecutarlo. */
+  proximo() {
+    let ev = this.lista.proximo();
+    while (ev && ev.cancelado) {
+      this.lista.extraer();
+      ev = this.lista.proximo();
+    }
+    return ev;
+  }
+
+  /** Ejecuta un evento y lo devuelve; null si la lista está vacía. */
+  paso() {
+    const ev = this.proximo();
+    if (!ev) return null;
+    this.lista.extraer();
+    if (ev.t < this.reloj) {
+      throw new Error(`El reloj retrocedería de ${this.reloj} a ${ev.t}: hay un error en el modelo.`);
+    }
+    this.reloj = ev.t;
+    this.manejadores.get(ev.tipo)(ev, this);
+    this.eventosEjecutados++;
+    this.#mezclarHuella(ev);
+    return ev;
+  }
+
+  /** Adelanta el reloj sin ejecutar eventos (para cerrar una corrida). */
+  avanzarReloj(t) {
+    if (t < this.reloj) throw new Error('El reloj no puede retroceder.');
+    this.reloj = t;
+  }
+
+  /**
+   * Huella de la corrida: un resumen de la secuencia (tipo, instante) de todos
+   * los eventos ejecutados. Dos corridas con la misma huella siguieron la misma
+   * traza, así que sirve para comprobar que un resultado es reproducible.
+   */
+  get huella() {
+    return (this.huellaNum >>> 0).toString(16).padStart(8, '0');
+  }
+
+  /**
+   * Deja constancia en la huella de una intervención hecha desde fuera del
+   * modelo (por ejemplo, cambiar réplicas a mano durante la corrida). Una
+   * corrida intervenida ya no se repite solo con el escenario y la semilla.
+   */
+  anotar(etiqueta) {
+    this.#mezclarHuella({ tipo: etiqueta, t: this.reloj });
+  }
+
+  #mezclarHuella(ev) {
+    const micro = Math.round(ev.t * 1e6);
+    const partes = [hashTexto(ev.tipo), micro % 4294967296, Math.floor(micro / 4294967296)];
+    let h = this.huellaNum;
+    for (const p of partes) {
+      h ^= p >>> 0;
+      h = Math.imul(h, 0x01000193);
+    }
+    this.huellaNum = h;
+  }
+}
+
+
+// ---- src/modelos/teoria-colas.js ----
+// Resultados teóricos de colas de un servidor, para verificar el simulador.
+//
+// Verificar es comprobar que el programa hace lo que el modelo dice. La forma
+// más directa es correrlo en un caso que tenga solución analítica y comparar.
+// Todas las tasas y tiempos usan la unidad de tiempo del escenario.
+
+
+/** M/M/1: llegadas Poisson, servicio exponencial, cola sin límite. */
+function mm1(lambda, mu) {
+  const rho = lambda / mu;
+  if (rho >= 1) return null;
+  const W = 1 / (mu - lambda);
+  const Wq = rho / (mu - lambda);
+  return {
+    rho,
+    L: rho / (1 - rho),
+    Lq: (rho * rho) / (1 - rho),
+    W,
+    Wq,
+    X: lambda,
+    pRechazo: 0,
+    // El tiempo de respuesta de M/M/1 es exponencial de tasa (mu - lambda).
+    percentilW: (p) => -Math.log(1 - p) / (mu - lambda),
+    densidadW: (t) => (mu - lambda) * Math.exp(-(mu - lambda) * t),
+  };
+}
+
+/** M/M/1/K: como M/M/1 pero caben K peticiones en total (cola + servicio). */
+function mm1k(lambda, mu, K) {
+  const a = lambda / mu;
+  // Pesos proporcionales a a^n, reescalados para no desbordar si a > 1.
+  const pesos = new Array(K + 1);
+  let w = 1;
+  let suma = 0;
+  for (let n = 0; n <= K; n++) {
+    pesos[n] = w;
+    suma += w;
+    w *= a;
+    if (w > 1e200) {
+      for (let j = 0; j <= n; j++) pesos[j] /= 1e200;
+      suma /= 1e200;
+      w /= 1e200;
+    }
+  }
+  const p = pesos.map((x) => x / suma);
+  const pK = p[K];
+  let L = 0;
+  for (let n = 0; n <= K; n++) L += n * p[n];
+  const lambdaEf = lambda * (1 - pK);
+  const W = L / lambdaEf;
+  const Wq = W - 1 / mu;
+  return {
+    rho: 1 - p[0],
+    L,
+    Lq: lambdaEf * Wq,
+    W,
+    Wq,
+    X: lambdaEf,
+    pRechazo: pK,
+  };
+}
+
+/** M/G/1: fórmula de Pollaczek-Khinchine (exacta). */
+function mg1(lambda, mediaServicio, cv2Servicio) {
+  const rho = lambda * mediaServicio;
+  if (rho >= 1) return null;
+  const Wq = (rho * mediaServicio * (1 + cv2Servicio)) / (2 * (1 - rho));
+  const W = Wq + mediaServicio;
+  return { rho, L: lambda * W, Lq: lambda * Wq, W, Wq, X: lambda, pRechazo: 0 };
+}
+
+/** G/G/1: aproximación de Kingman (buena con carga alta, no es exacta). */
+function gg1Kingman(lambda, mediaServicio, cv2Llegadas, cv2Servicio) {
+  const rho = lambda * mediaServicio;
+  if (rho >= 1) return null;
+  const Wq = (rho / (1 - rho)) * ((cv2Llegadas + cv2Servicio) / 2) * mediaServicio;
+  const W = Wq + mediaServicio;
+  return { rho, L: lambda * W, Lq: lambda * Wq, W, Wq, X: lambda, pRechazo: 0 };
+}
+
+/**
+ * Elige la mejor referencia teórica disponible para un escenario de un pod.
+ * metodo: 'exacta' | 'aproximada' | 'inestable' | 'ninguna'
+ */
+function teoriaPara(escenario) {
+  const a = crearDistribucion(escenario.llegadas);
+  const s = crearDistribucion(escenario.servicio);
+  const lambda = 1 / a.media;
+  const mu = 1 / s.media;
+  const cargaOfrecida = lambda / mu;
+  const finita = escenario.capacidadCola !== null && escenario.capacidadCola !== undefined;
+  const K = finita ? escenario.capacidadCola + 1 : null;
+  const kendall = `${a.kendall}/${s.kendall}/1${finita ? `/${K}` : ''}`;
+  const base = { kendall, lambda, mu, cargaOfrecida, cv2Llegadas: a.cv2, cv2Servicio: s.cv2, K };
+
+  if (finita) {
+    if (a.esExponencial && s.esExponencial) {
+      return { ...base, metodo: 'exacta', nombre: `Fórmulas de M/M/1/${K}`, ...mm1k(lambda, mu, K) };
+    }
+    return {
+      ...base,
+      metodo: 'ninguna',
+      nombre: 'Sin fórmula cerrada sencilla',
+      nota: 'Con cola limitada y distribuciones generales no hay una fórmula sencilla: aquí la simulación es la herramienta.',
+    };
+  }
+
+  if (a.esDeterminista && s.esDeterminista) {
+    if (cargaOfrecida > 1) {
+      return { ...base, metodo: 'inestable', nombre: 'Sistema saturado', nota: 'El servicio tarda más que el intervalo entre llegadas: la cola crece sin límite.' };
+    }
+    return {
+      ...base,
+      metodo: 'exacta',
+      nombre: 'D/D/1: sin azar no hay espera',
+      rho: cargaOfrecida, L: cargaOfrecida, Lq: 0, W: s.media, Wq: 0, X: lambda, pRechazo: 0,
+    };
+  }
+
+  if (cargaOfrecida >= 1) {
+    return {
+      ...base,
+      metodo: 'inestable',
+      nombre: 'Sistema saturado',
+      nota: 'Llegan peticiones más rápido de lo que el pod las atiende (ρ ≥ 1): la cola crece sin límite y no existe un estado estable con el cual comparar.',
+    };
+  }
+
+  if (a.esExponencial && s.esExponencial) {
+    return { ...base, metodo: 'exacta', nombre: 'Fórmulas de M/M/1', ...mm1(lambda, mu) };
+  }
+  if (a.esExponencial) {
+    return { ...base, metodo: 'exacta', nombre: 'Pollaczek-Khinchine (M/G/1)', ...mg1(lambda, s.media, s.cv2) };
+  }
+  return {
+    ...base,
+    metodo: 'aproximada',
+    nombre: 'Aproximación de Kingman (G/G/1)',
+    nota: 'Kingman es una aproximación: se acerca al valor real cuando la carga es alta, pero no es exacta.',
+    ...gg1Kingman(lambda, s.media, a.cv2, s.cv2),
+  };
+}
+
+/** M/M/c: c servidores iguales con una cola compartida (fórmula de Erlang C). */
+function mmc(lambda, mu, c) {
+  const a = lambda / mu;
+  const rho = a / c;
+  if (rho >= 1) return null;
+  let termino = 1; // a^n / n!
+  let suma = 1;
+  for (let n = 1; n < c; n++) {
+    termino *= a / n;
+    suma += termino;
+  }
+  const ultimo = (termino * a) / c / (1 - rho); // a^c / (c! (1 - rho))
+  const pEspera = ultimo / (suma + ultimo);
+  const Lq = (pEspera * rho) / (1 - rho);
+  const Wq = Lq / lambda;
+  const W = Wq + 1 / mu;
+  return { rho, pEspera, Lq, Wq, W, L: lambda * W, X: lambda, pRechazo: 0 };
+}
+
+/**
+ * Referencia teórica para una cadena en serie (red de Jackson).
+ *
+ * Si las llegadas son de Poisson y cada servicio es exponencial, la salida de
+ * cada etapa vuelve a ser de Poisson (teorema de Burke) y cada servicio se
+ * analiza por separado. Con cola compartida es un M/M/c; con reparto aleatorio
+ * son c colas M/M/1 que reciben λ/c cada una.
+ *
+ * Devuelve { aplica: true, servicios: [...], W } o { aplica: false, motivo }.
+ */
+function teoriaCadena(escenario) {
+  const e = escenario;
+  const no = (motivo) => ({ aplica: false, motivo });
+  const llegadas = crearDistribucion(e.llegadas);
+  if (!llegadas.esExponencial) return no('Las llegadas no son de Poisson.');
+  if (e.pico) return no('El tráfico cambia durante la corrida (hay un pico).');
+  if (e.hpa.modo === 'aplicar') return no('El HPA cambia el número de réplicas durante la corrida.');
+  if (e.balanceo !== 'compartida' && e.balanceo !== 'aleatorio') {
+    return no('Solo hay fórmula cerrada para cola compartida (M/M/c) y reparto aleatorio (M/M/1 por réplica).');
+  }
+  const lambda = 1 / llegadas.media;
+  let demandaMaxima = 0;
+  const servicios = [];
+  for (const s of e.servicios) {
+    const d = crearDistribucion(s.servicio);
+    if (!d.esExponencial) return no(`El tiempo de servicio de ${s.nombre} no es exponencial.`);
+    const velocidad = Math.min(1, s.cpuLimit / 1000);
+    demandaMaxima += s.replicas * velocidad;
+    const mu = velocidad / d.media;
+    const c = s.replicas;
+    const rho = lambda / (c * mu);
+    if (rho >= 1) return no(`${s.nombre} está saturado (ρ = ${rho.toFixed(2).replace('.', ',')}): su cola crece sin límite y no hay estado estable.`);
+    const t = e.balanceo === 'compartida' ? mmc(lambda, mu, c) : mm1(lambda / c, mu);
+    servicios.push({ id: s.id, rho, Wq: t.Wq, S: 1 / mu, W: t.W, Lq: lambda * t.Wq });
+  }
+  if (demandaMaxima > e.nodo.cpu / 1000 + 1e-9) {
+    return no('Los limits de CPU suman más que los núcleos del nodo: puede haber contención y la fórmula no la contempla.');
+  }
+  const red = e.redMs * e.servicios.length;
+  return {
+    aplica: true,
+    nombre: e.balanceo === 'compartida' ? 'Red de Jackson con etapas M/M/c' : 'Red de Jackson con colas M/M/1 por réplica',
+    lambda,
+    servicios,
+    red,
+    W: servicios.reduce((suma, s) => suma + s.W, 0) + red,
+  };
+}
+
+
+// ---- src/modelos/pod-unico.js ----
+// Modelo 1: un solo pod visto como una cola de un servidor.
+//
+// Traducción de Kubernetes al modelo de eventos discretos:
+//   petición HTTP            -> entidad
+//   pod con un contenedor    -> servidor (atiende una petición a la vez)
+//   peticiones en espera     -> cola FIFO
+//   límite de la cola        -> capacidad; lo que no cabe se rechaza (HTTP 503)
+//
+// Eventos del modelo (lo único que hace avanzar el reloj):
+//   llegada            una petición llega al pod
+//   fin-servicio       el pod termina de atender una petición
+//   fin-calentamiento  se descartan las estadísticas del arranque
+// "Iniciar servicio" no es un evento: es una consecuencia inmediata de una
+// llegada (si el pod está libre) o de un fin de servicio (si hay cola).
+
+
+// Desempate de eventos simultáneos: primero sale quien termina, luego entra
+// quien llega. Así, el puesto que se libera en t puede ocuparlo quien llega en t.
+const PRIORIDAD = { CONTROL: 0, FIN_SERVICIO: 1, LLEGADA: 2 };
+
+function escenarioPorDefecto() {
+  return {
+    version: 1,
+    modelo: 'pod-unico',
+    nombre: 'M/M/1 estable (ρ = 0,8)',
+    unidadTiempo: 'ms',
+    semilla: 2026,
+    llegadas: { tipo: 'exponencial', media: 100 },
+    servicio: { tipo: 'exponencial', media: 80 },
+    capacidadCola: null,
+    calentamiento: 0,
+    horizonte: 3600000,
+  };
+}
+
+/** Valida un escenario y devuelve una copia normalizada. Lanza Error si no sirve. */
+function validarEscenario(entrada) {
+  if (!entrada || typeof entrada !== 'object') throw new Error('El escenario debe ser un objeto JSON.');
+  const base = escenarioPorDefecto();
+  const e = { ...base, ...JSON.parse(JSON.stringify(entrada)) };
+  if (e.modelo !== 'pod-unico') throw new Error(`Este applet solo entiende el modelo "pod-unico" (recibió "${e.modelo}").`);
+  crearDistribucion(e.llegadas);
+  crearDistribucion(e.servicio);
+  if (!Number.isInteger(e.semilla) || e.semilla < 0 || e.semilla > 4294967295) {
+    throw new Error('La semilla debe ser un entero entre 0 y 4294967295.');
+  }
+  if (!(typeof e.horizonte === 'number' && Number.isFinite(e.horizonte) && e.horizonte > 0)) {
+    throw new Error('El horizonte de simulación debe ser mayor que 0.');
+  }
+  if (!(typeof e.calentamiento === 'number' && e.calentamiento >= 0 && e.calentamiento < e.horizonte)) {
+    throw new Error('El calentamiento debe ser mayor o igual a 0 y menor que el horizonte.');
+  }
+  if (e.capacidadCola !== null && !(Number.isInteger(e.capacidadCola) && e.capacidadCola >= 0)) {
+    throw new Error('La capacidad de la cola debe ser un entero mayor o igual a 0, o null para cola sin límite.');
+  }
+  return e;
+}
+
+class PodUnico {
+  constructor(escenario) {
+    this.esc = validarEscenario(escenario);
+    this.sim = new Simulador({ semilla: this.esc.semilla });
+    this.distLlegadas = crearDistribucion(this.esc.llegadas);
+    this.distServicio = crearDistribucion(this.esc.servicio);
+    this.azarLlegadas = this.sim.flujo('llegadas');
+    this.azarServicio = this.sim.flujo('servicio');
+
+    // Estado del sistema
+    this.cola = [];
+    this.enServicio = null;
+    this.siguienteId = 1;
+    this.terminado = false;
+
+    // Contadores de toda la corrida (para el invariante de conservación)
+    this.llegadas = 0;
+    this.atendidas = 0;
+    this.rechazadas = 0;
+
+    // Estadísticas del periodo de observación (después del calentamiento)
+    this.obs = {
+      desde: 0,
+      llegadas: 0,
+      atendidas: 0,
+      rechazadas: 0,
+      respuesta: new Acumulador(),
+      espera: new Acumulador(),
+      servicio: new Acumulador({ guardarMuestras: false }),
+      enSistema: new PromedioTemporal(0, 0),
+      enCola: new PromedioTemporal(0, 0),
+      ocupado: new PromedioTemporal(0, 0),
+    };
+
+    this.novedades = [];
+    this.sim.en('llegada', (ev) => this.#alLlegar(ev));
+    this.sim.en('fin-servicio', (ev) => this.#alTerminarServicio(ev));
+    this.sim.en('fin-calentamiento', () => this.#alTerminarCalentamiento());
+
+    this.sim.agendar(this.distLlegadas.muestrear(this.azarLlegadas), 'llegada', { id: this.siguienteId }, PRIORIDAD.LLEGADA);
+    if (this.esc.calentamiento > 0) {
+      this.sim.agendar(this.esc.calentamiento, 'fin-calentamiento', {}, PRIORIDAD.CONTROL);
+    }
+  }
+
+  get reloj() {
+    return this.sim.reloj;
+  }
+
+  get enSistema() {
+    return this.cola.length + (this.enServicio ? 1 : 0);
+  }
+
+  /** Ejecuta un evento. Devuelve { evento, novedades } o null si terminó. */
+  paso() {
+    if (this.terminado) return null;
+    const prox = this.sim.proximo();
+    if (!prox || prox.t > this.esc.horizonte) {
+      this.sim.avanzarReloj(this.esc.horizonte);
+      this.terminado = true;
+      return null;
+    }
+    this.novedades = [];
+    const evento = this.sim.paso();
+    return { evento, novedades: this.novedades };
+  }
+
+  /** Corre hasta el horizonte sin detenerse. */
+  correr() {
+    while (this.paso()) { /* un evento por vuelta */ }
+    return this.resultados();
+  }
+
+  #alLlegar() {
+    const t = this.sim.reloj;
+    const peticion = { id: this.siguienteId++, tLlegada: t, tInicio: null, tFin: null, servicio: null };
+    this.llegadas++;
+    this.obs.llegadas++;
+
+    // La siguiente llegada se agenda siempre: la fuente no depende del pod.
+    this.sim.agendar(this.distLlegadas.muestrear(this.azarLlegadas), 'llegada', { id: this.siguienteId }, PRIORIDAD.LLEGADA);
+
+    if (this.enServicio === null) {
+      this.#iniciarServicio(peticion);
+    } else if (this.esc.capacidadCola !== null && this.cola.length >= this.esc.capacidadCola) {
+      this.rechazadas++;
+      this.obs.rechazadas++;
+      this.novedades.push({ tipo: 'rechazo', id: peticion.id });
+    } else {
+      this.cola.push(peticion);
+      this.novedades.push({ tipo: 'encola', id: peticion.id });
+    }
+    this.#registrarEstado();
+  }
+
+  #iniciarServicio(peticion) {
+    peticion.tInicio = this.sim.reloj;
+    peticion.servicio = this.distServicio.muestrear(this.azarServicio);
+    this.enServicio = peticion;
+    this.sim.agendar(peticion.servicio, 'fin-servicio', { id: peticion.id }, PRIORIDAD.FIN_SERVICIO);
+    this.novedades.push({ tipo: 'inicia', id: peticion.id });
+  }
+
+  #alTerminarServicio() {
+    const t = this.sim.reloj;
+    const peticion = this.enServicio;
+    peticion.tFin = t;
+    this.enServicio = null;
+    this.atendidas++;
+    this.obs.atendidas++;
+    this.obs.respuesta.agregar(peticion.tFin - peticion.tLlegada);
+    this.obs.espera.agregar(peticion.tInicio - peticion.tLlegada);
+    this.obs.servicio.agregar(peticion.servicio);
+    this.novedades.push({ tipo: 'sale', id: peticion.id, respuesta: peticion.tFin - peticion.tLlegada });
+    if (this.cola.length > 0) this.#iniciarServicio(this.cola.shift());
+    this.#registrarEstado();
+  }
+
+  #alTerminarCalentamiento() {
+    const t = this.sim.reloj;
+    const o = this.obs;
+    o.desde = t;
+    o.llegadas = 0;
+    o.atendidas = 0;
+    o.rechazadas = 0;
+    o.respuesta.reiniciar();
+    o.espera.reiniciar();
+    o.servicio.reiniciar();
+    o.enSistema.reiniciar(t);
+    o.enCola.reiniciar(t);
+    o.ocupado.reiniciar(t);
+    this.novedades.push({ tipo: 'calentamiento' });
+  }
+
+  #registrarEstado() {
+    const t = this.sim.reloj;
+    this.obs.enSistema.actualizar(t, this.enSistema);
+    this.obs.enCola.actualizar(t, this.cola.length);
+    this.obs.ocupado.actualizar(t, this.enServicio ? 1 : 0);
+  }
+
+  /** Indicadores del periodo de observación, evaluados en el reloj actual. */
+  resultados() {
+    const t = this.sim.reloj;
+    const o = this.obs;
+    const duracion = t - o.desde;
+    const ordenadas = o.respuesta.ordenadas();
+    const admitidas = o.llegadas - o.rechazadas;
+    return {
+      reloj: t,
+      duracionObservada: duracion,
+      eventos: this.sim.eventosEjecutados,
+      huella: this.sim.huella,
+      llegadas: this.llegadas,
+      atendidas: this.atendidas,
+      rechazadas: this.rechazadas,
+      enSistema: this.enSistema,
+      conserva: this.llegadas === this.atendidas + this.rechazadas + this.enSistema,
+      n: o.respuesta.n,
+      rho: o.ocupado.media(t),
+      L: o.enSistema.media(t),
+      Lq: o.enCola.media(t),
+      W: o.respuesta.n ? o.respuesta.media : NaN,
+      Wq: o.espera.n ? o.espera.media : NaN,
+      S: o.servicio.n ? o.servicio.media : NaN,
+      p50: percentil(ordenadas, 0.5),
+      p95: percentil(ordenadas, 0.95),
+      p99: percentil(ordenadas, 0.99),
+      maxW: o.respuesta.n ? o.respuesta.max : NaN,
+      maxEnSistema: o.enSistema.maximo,
+      X: duracion > 0 ? o.atendidas / duracion : NaN,
+      lambdaObservada: duracion > 0 ? o.llegadas / duracion : NaN,
+      lambdaEfectiva: duracion > 0 ? admitidas / duracion : NaN,
+      pRechazo: o.llegadas > 0 ? o.rechazadas / o.llegadas : NaN,
+      respuestasOrdenadas: ordenadas,
+    };
+  }
+}
+
+
+// ---- web/comun/base.js ----
+// Piezas de interfaz que comparten todos los applets: acceso al DOM, formato
+// de números, gráficos y formularios de distribuciones.
+
+/* global crearDistribucion, especPorDefecto, CATALOGO, Aleatorio, percentil */
+
+const $ = (id) => document.getElementById(id);
+const NS_SVG = 'http://www.w3.org/2000/svg';
+
+function el(nombre, attrs = {}, texto) {
+  const n = document.createElement(nombre);
+  for (const [k, v] of Object.entries(attrs)) if (v !== undefined && v !== null) n.setAttribute(k, v);
+  if (texto !== undefined) n.textContent = texto;
+  return n;
+}
+function elSvg(nombre, attrs = {}, texto) {
+  const n = document.createElementNS(NS_SVG, nombre);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  if (texto !== undefined) n.textContent = texto;
+  return n;
+}
+
+// ---------------------------------------------------------------------------
+// Formato de números (coma decimal, como se escribe en Colombia)
+// ---------------------------------------------------------------------------
+const FORMATOS = [0, 1, 2, 3].map((d) => new Intl.NumberFormat('es-CO', { minimumFractionDigits: d, maximumFractionDigits: d }));
+const num = (x, d = 2) => (Number.isFinite(x) ? FORMATOS[d].format(x) : '—');
+const entero = (x) => num(x, 0);
+/** Número con decimales según su tamaño: 1.234 · 123,4 · 12,34 · 1,23 */
+function adapt(x) {
+  if (!Number.isFinite(x)) return '—';
+  const a = Math.abs(x);
+  return num(x, a >= 1000 ? 0 : a >= 100 ? 1 : 2);
+}
+const pct = (x, d = 1) => (Number.isFinite(x) ? `${num(x * 100, d)} %` : '—');
+const corto = (x) => (Number.isFinite(x) ? String(Math.round(x * 100) / 100).replace('.', ',') : '—');
+
+// ---------------------------------------------------------------------------
+// Gráficos (SVG dibujado a mano, una sola escala por eje)
+// ---------------------------------------------------------------------------
+function marcasEje(min, max, cuantas) {
+  const rango = max - min;
+  if (!(rango > 0)) return { paso: 1, valores: [min] };
+  const bruto = rango / cuantas;
+  const mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+  const norm = bruto / mag;
+  const paso = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const valores = [];
+  for (let v = Math.ceil(min / paso - 1e-9) * paso; v <= max + paso * 1e-9; v += paso) valores.push(Math.abs(v) < paso * 1e-9 ? 0 : v);
+  return { paso, valores };
+}
+function etiquetaEje(v, paso) {
+  const d = Math.max(0, Math.min(3, -Math.floor(Math.log10(paso) + 1e-9)));
+  return num(v, d);
+}
+
+class Grafico {
+  constructor(id) {
+    this.raiz = $(id);
+    this.svg = this.raiz.querySelector('svg');
+    this.globo = this.raiz.querySelector('.globo');
+    this.puntero = null;
+    this.puntos = [];
+    this.raiz.addEventListener('pointermove', (e) => {
+      this.puntero = e.clientX - this.svg.getBoundingClientRect().left;
+      this.resaltar();
+    });
+    this.raiz.addEventListener('pointerleave', () => { this.puntero = null; this.resaltar(); });
+  }
+
+  /**
+   * def = { x:{min,max,titulo}, y:{min,max}, vacio, capas(ctx) -> string SVG,
+   *         puntos:[{x, titulo, filas:[{clave,nombre,valor}], barra}] }
+   */
+  dibujar(def) {
+    const ancho = Math.max(260, this.raiz.clientWidth || 340);
+    const alto = 210;
+    const m = { izq: 46, der: 14, sup: 14, inf: 36 };
+    this.svg.setAttribute('viewBox', `0 0 ${ancho} ${alto}`);
+    if (def.vacio) {
+      this.svg.innerHTML = `<text class="vacio" x="${ancho / 2}" y="${alto / 2}" text-anchor="middle">${def.vacio}</text>`;
+      this.puntos = [];
+      this.globo.hidden = true;
+      return;
+    }
+    const px = (v) => m.izq + ((v - def.x.min) / (def.x.max - def.x.min || 1)) * (ancho - m.izq - m.der);
+    const py = (v) => alto - m.inf - ((v - def.y.min) / (def.y.max - def.y.min || 1)) * (alto - m.sup - m.inf);
+    const ctx = { px, py, ancho, alto, m, x0: m.izq, x1: ancho - m.der, y0: alto - m.inf, y1: m.sup };
+    const ex = marcasEje(def.x.min, def.x.max, Math.max(2, Math.floor((ancho - m.izq - m.der) / 70)));
+    const ey = marcasEje(def.y.min, def.y.max, 4);
+    let s = '';
+    for (const v of ey.valores) {
+      s += `<line class="rejilla" x1="${ctx.x0}" x2="${ctx.x1}" y1="${py(v)}" y2="${py(v)}"/>`;
+      s += `<text x="${ctx.x0 - 6}" y="${py(v) + 3.5}" text-anchor="end">${etiquetaEje(v, ey.paso)}</text>`;
+    }
+    for (const v of ex.valores) {
+      s += `<text x="${px(v)}" y="${ctx.y0 + 14}" text-anchor="middle">${etiquetaEje(v, ex.paso)}</text>`;
+    }
+    s += `<text class="titulo-eje" x="${(ctx.x0 + ctx.x1) / 2}" y="${alto - 4}" text-anchor="middle">${def.x.titulo}</text>`;
+    s += def.capas(ctx);
+    s += `<line class="eje" x1="${ctx.x0}" x2="${ctx.x1}" y1="${ctx.y0}" y2="${ctx.y0}"/>`;
+    s += `<line class="cruz" data-cruz x1="0" x2="0" y1="${ctx.y1}" y2="${ctx.y0}" visibility="hidden"/>`;
+    this.svg.innerHTML = s;
+    this.puntos = (def.puntos || []).map((p) => ({ ...p, pxX: px(p.x) }));
+    this.ctx = ctx;
+    this.resaltar();
+  }
+
+  resaltar() {
+    const cruz = this.svg.querySelector('[data-cruz]');
+    for (const b of this.svg.querySelectorAll('.activa')) b.classList.remove('activa');
+    if (this.puntero === null || this.puntos.length === 0 || !cruz) {
+      this.globo.hidden = true;
+      if (cruz) cruz.setAttribute('visibility', 'hidden');
+      return;
+    }
+    const escala = (this.svg.viewBox.baseVal.width || 1) / (this.svg.getBoundingClientRect().width || 1);
+    const x = this.puntero * escala;
+    let mejor = this.puntos[0];
+    for (const p of this.puntos) if (Math.abs(p.pxX - x) < Math.abs(mejor.pxX - x)) mejor = p;
+    if (mejor.barra !== undefined) {
+      const b = this.svg.querySelector(`[data-barra="${mejor.barra}"]`);
+      if (b) b.classList.add('activa');
+    } else {
+      cruz.setAttribute('x1', mejor.pxX);
+      cruz.setAttribute('x2', mejor.pxX);
+      cruz.setAttribute('visibility', 'visible');
+    }
+    this.globo.replaceChildren(el('div', {}, mejor.titulo));
+    for (const f of mejor.filas) {
+      const fila = el('div');
+      fila.append(el('span', { class: `clave ${f.clave}` }), el('strong', {}, f.valor), document.createTextNode(` ${f.nombre}`));
+      this.globo.append(fila);
+    }
+    this.globo.hidden = false;
+    const mitad = this.globo.offsetWidth / 2;
+    const anchoReal = this.raiz.clientWidth;
+    const izq = Math.max(mitad, Math.min(anchoReal - mitad, mejor.pxX / escala));
+    this.globo.style.left = `${izq}px`;
+    this.globo.style.top = `${this.ctx.y1 + 2}px`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Distribuciones: vista previa y formulario
+// ---------------------------------------------------------------------------
+function vistaDistribucion(svg, espec) {
+  const d = crearDistribucion(espec);
+  const rng = new Aleatorio(12345);
+  const N = 4000;
+  const muestras = new Float64Array(N);
+  for (let i = 0; i < N; i++) muestras[i] = d.muestrear(rng);
+  muestras.sort();
+  const tope = d.esDeterminista ? d.media * 2 : Math.max(percentil(muestras, 0.985), d.media * 1.2);
+  const ancho = Math.max(200, svg.clientWidth || 300);
+  const alto = 54;
+  const base = alto - 14;
+  const CUBETAS = Math.min(40, Math.floor(ancho / 8));
+  const cuenta = new Array(CUBETAS).fill(0);
+  for (const v of muestras) if (v <= tope) cuenta[Math.min(CUBETAS - 1, Math.floor((v / tope) * CUBETAS))]++;
+  const maxC = Math.max(...cuenta);
+  const paso = ancho / CUBETAS;
+  let s = '';
+  cuenta.forEach((c, i) => {
+    const h = (c / maxC) * (base - 2);
+    if (c > 0) s += `<rect class="barra" x="${(i * paso + 1).toFixed(1)}" y="${(base - h).toFixed(1)}" width="${(paso - 2).toFixed(1)}" height="${h.toFixed(1)}"/>`;
+  });
+  const xMedia = (d.media / tope) * ancho;
+  s += `<line class="media" x1="${xMedia}" x2="${xMedia}" y1="0" y2="${base}"/>`;
+  s += `<text x="0" y="${alto - 2}">0</text>`;
+  s += `<text x="${Math.min(ancho - 30, Math.max(14, xMedia))}" y="${alto - 2}" text-anchor="middle">media</text>`;
+  s += `<text x="${ancho}" y="${alto - 2}" text-anchor="end">${adapt(tope)} ms</text>`;
+  svg.setAttribute('viewBox', `0 0 ${ancho} ${alto}`);
+  svg.innerHTML = s;
+}
+
+/**
+ * Formulario de una distribución: tipo, parámetros, vista previa y resumen.
+ *   cont        elemento donde se dibuja
+ *   pref        prefijo para los id de los controles (deben ser estables)
+ *   espec       especificación actual, p. ej. { tipo: 'exponencial', media: 25 }
+ *   etiqueta    texto del selector de tipo
+ *   tasa        'λ', 'μ' o null: símbolo de la tasa que se muestra en el resumen
+ *   alCambiar   función que recibe la nueva especificación (quien llama la valida)
+ */
+function montarFormDist(cont, { pref, espec, etiqueta, tasa = null, alCambiar }) {
+  cont.replaceChildren();
+  const leer = () => {
+    const tipo = selector.value;
+    const nueva = { tipo };
+    for (const p of CATALOGO[tipo].params) {
+      const bruto = $(`${pref}-p-${p.id}`).value;
+      nueva[p.id] = p.unidad === 'lista'
+        ? bruto.split(/[;\s]+/).filter(Boolean).map((x) => Number(x.replace(',', '.')))
+        : Number(bruto);
+    }
+    alCambiar(nueva);
+  };
+
+  const campoTipo = el('div', { class: 'campo ancho' });
+  const selector = el('select', { id: `${pref}-tipo` });
+  for (const [tipo, info] of Object.entries(CATALOGO)) selector.append(el('option', { value: tipo }, info.etiqueta));
+  selector.value = espec.tipo;
+  selector.addEventListener('change', () => alCambiar(especPorDefecto(selector.value, crearDistribucion(espec).media)));
+  campoTipo.append(el('label', { for: `${pref}-tipo` }, etiqueta), selector);
+
+  const campos = el('div', { class: 'campos' });
+  campos.append(campoTipo);
+  for (const p of CATALOGO[espec.tipo].params) {
+    const id = `${pref}-p-${p.id}`;
+    const esLista = p.unidad === 'lista';
+    const campo = el('div', { class: `campo${esLista ? ' ancho' : ''}` });
+    const entrada = esLista
+      ? el('input', { type: 'text', id, class: 'dato', inputmode: 'decimal' })
+      : el('input', { type: 'number', id, min: p.min, step: p.entero ? 1 : 'any' });
+    entrada.value = esLista ? espec[p.id].join('; ') : espec[p.id];
+    entrada.addEventListener('change', leer);
+    campo.append(
+      el('label', { for: id }, esLista ? 'Valores medidos (ms), separados por punto y coma' : `${p.etiqueta}${p.unidad === 'tiempo' ? ' (ms)' : ''}`),
+      entrada,
+    );
+    campos.append(campo);
+  }
+  const d = crearDistribucion(espec);
+  const vista = document.createElementNS(NS_SVG, 'svg');
+  vista.setAttribute('class', 'vista-dist');
+  vista.setAttribute('aria-hidden', 'true');
+  const textoTasa = tasa ? ` · ${tasa} = ${corto(1000 / d.media)} pet/s` : '';
+  const resumen = el('p', { class: 'resumen-dist' }, `media ${corto(d.media)} ms · CV² = ${corto(d.cv2)}${textoTasa}`);
+  cont.append(campos, vista, resumen);
+  vistaDistribucion(vista, espec);
+  return { redibujar: () => vistaDistribucion(vista, espec) };
+}
+
+
+// ---- web/pod-unico/app.js ----
+// Interfaz del applet "Un pod es una cola de un servidor".
+// Usa el motor (src/motor) y el modelo (src/modelos/pod-unico.js) tal cual:
+// aquí solo hay dibujo, formularios y el bucle de animación.
+
+/* global PodUnico, teoriaPara, validarEscenario, escenarioPorDefecto, crearDistribucion,
+   especPorDefecto, resumenDistribucion, CATALOGO, percentil,
+   $, el, elSvg, num, entero, adapt, pct, corto, Grafico, vistaDistribucion */
+
+// ---------------------------------------------------------------------------
+// Escenarios de ejemplo
+// ---------------------------------------------------------------------------
+const base = escenarioPorDefecto();
+const PREAJUSTES = [
+  { id: 'mm1', esc: { ...base } },
+  { id: 'md1', esc: { ...base, nombre: 'M/D/1: servicio constante', servicio: { tipo: 'constante', valor: 80 } } },
+  { id: 'mg1', esc: { ...base, nombre: 'M/G/1: servicio muy variable (CV = 2)', servicio: { tipo: 'lognormal', media: 80, cv: 2 } } },
+  { id: 'saturado', esc: { ...base, nombre: 'Saturado (ρ = 1,25): la cola no para de crecer', servicio: { tipo: 'exponencial', media: 125 }, horizonte: 600000 } },
+  { id: 'mm1k', esc: { ...base, nombre: 'M/M/1/5: sobrecarga con rechazos', servicio: { tipo: 'exponencial', media: 125 }, capacidadCola: 4 } },
+  { id: 'traza', esc: { ...base, nombre: 'Traza para seguir a mano (D/D/1 con rechazos)', llegadas: { tipo: 'constante', valor: 2 }, servicio: { tipo: 'constante', valor: 3 }, capacidadCola: 1, horizonte: 30 } },
+];
+const VELOCIDADES = [0.5, 1, 2, 5, 10, 25, 100]; // llegadas por segundo real, en promedio
+const NOMBRE_EVENTO = { 'llegada': 'Llegada', 'fin-servicio': 'Fin de servicio', 'fin-calentamiento': 'Fin de calentamiento' };
+
+// Geometría del diagrama (coordenadas del viewBox)
+const GEO = {
+  fuente: { x: 174, y: 104 },
+  ranura: (i) => ({ x: 540 - i * 23, y: 124 }),
+  entradaCola: { x: 280, y: 124 },
+  pod: { x: 726, y: 98 },
+  salida: { x: 868, y: 104 },
+  rechazo: { x: 218, y: 184 },
+  ranurasVisibles: 12,
+};
+
+// ---------------------------------------------------------------------------
+// Estado de la interfaz
+// ---------------------------------------------------------------------------
+let esc = validarEscenario(PREAJUSTES[0].esc);
+let modelo = null;
+let teoria = null;
+let resultados = null;
+let corriendo = false;
+let rapido = false;
+let relojVisual = 0;        // el reloj que se muestra; avanza de forma continua al animar
+let relojIntegro = true;    // ¿algún evento hizo retroceder el reloj?
+let instantePrevio = 0;
+let bitacora = [];
+let serieN = [];
+let serieW = [];
+let zancadaW = 1;
+const fichas = new Map();
+const pendiente = { diagrama: true, motor: true, metricas: true, graficos: true };
+const ultimo = { motor: 0, metricas: 0, graficos: 0, diagrama: 0 };
+
+// ---------------------------------------------------------------------------
+// Ciclo de vida de la corrida
+// ---------------------------------------------------------------------------
+function reiniciar() {
+  modelo = new PodUnico(esc);
+  teoria = teoriaPara(esc);
+  corriendo = false;
+  rapido = false;
+  relojVisual = 0;
+  relojIntegro = true;
+  instantePrevio = 0;
+  bitacora = [];
+  serieN = [{ t: 0, n: 0 }];
+  serieW = [];
+  zancadaW = 1;
+  for (const f of fichas.values()) f.nodo.remove();
+  fichas.clear();
+  pintarEstatico();
+  marcarTodo();
+}
+
+function marcarTodo() {
+  pendiente.diagrama = pendiente.motor = pendiente.metricas = pendiente.graficos = true;
+  ultimo.motor = ultimo.metricas = ultimo.graficos = ultimo.diagrama = 0;
+}
+
+/** Registra en la interfaz el resultado de ejecutar un evento del modelo. */
+function procesar(paso, animar) {
+  const { evento, novedades } = paso;
+  if (evento.t < instantePrevio) relojIntegro = false;
+  instantePrevio = evento.t;
+
+  bitacora.push({ t: evento.t, tipo: evento.tipo, novedades, n: modelo.enSistema, cola: modelo.cola.length });
+  if (bitacora.length > 120) bitacora.splice(0, 60);
+
+  serieN.push({ t: evento.t, n: modelo.enSistema });
+  if (serieN.length > 800) serieN.splice(0, 400);
+
+  for (const nov of novedades) {
+    if (nov.tipo === 'sale') {
+      const k = modelo.obs.respuesta.n;
+      if (k % zancadaW === 0) {
+        serieW.push({ n: k, w: modelo.obs.respuesta.media });
+        if (serieW.length > 600) {
+          serieW = serieW.filter((_, i) => i % 2 === 1);
+          zancadaW *= 2;
+        }
+      }
+    } else if (nov.tipo === 'calentamiento') {
+      serieW = [];
+      zancadaW = 1;
+    }
+    if (animar) animarNovedad(nov);
+  }
+  marcarCambio();
+}
+
+function marcarCambio() {
+  pendiente.diagrama = pendiente.motor = pendiente.metricas = pendiente.graficos = true;
+}
+
+function unEvento() {
+  if (modelo.terminado) return;
+  corriendo = false;
+  rapido = false;
+  const paso = modelo.paso();
+  if (paso) procesar(paso, true);
+  relojVisual = modelo.reloj;
+  marcarTodo();
+}
+
+/** Adelanta la corrida sin animar hasta el instante t (se usa al abrir la página). */
+function adelantarHasta(t) {
+  for (;;) {
+    const prox = modelo.sim.proximo();
+    if (!prox || prox.t > t || prox.t > esc.horizonte) break;
+    procesar(modelo.paso(), false);
+  }
+  relojVisual = Math.min(t, esc.horizonte);
+  reconstruirFichas();
+  marcarTodo();
+}
+
+// ---------------------------------------------------------------------------
+// Fichas: las peticiones que se ven moverse por el diagrama
+// ---------------------------------------------------------------------------
+function crearFicha(id, pos, estado) {
+  const nodo = elSvg('g', { class: 'ficha' });
+  nodo.append(elSvg('circle', { r: 10 }));
+  if (id < 10000) {
+    const t = elSvg('text', { y: 3.4 }, String(id));
+    if (id >= 1000) t.setAttribute('style', 'font-size:7.5px');
+    nodo.append(t);
+  }
+  $('capa-fichas').append(nodo);
+  const f = { id, x: pos.x, y: pos.y, estado, nodo };
+  if (estado === 'rechazada') nodo.classList.add('rechazada');
+  fichas.set(id, f);
+  return f;
+}
+
+function animarNovedad(nov) {
+  if (nov.tipo === 'encola') {
+    if (modelo.cola.length <= GEO.ranurasVisibles) crearFicha(nov.id, GEO.fuente, 'cola');
+  } else if (nov.tipo === 'inicia') {
+    const f = fichas.get(nov.id) || crearFicha(nov.id, GEO.fuente, 'servicio');
+    f.estado = 'servicio';
+  } else if (nov.tipo === 'sale') {
+    const f = fichas.get(nov.id);
+    if (f) f.estado = 'saliendo';
+  } else if (nov.tipo === 'rechazo') {
+    crearFicha(nov.id, GEO.fuente, 'rechazada');
+  }
+}
+
+function reconstruirFichas() {
+  for (const f of fichas.values()) f.nodo.remove();
+  fichas.clear();
+  if (modelo.enServicio) crearFicha(modelo.enServicio.id, GEO.pod, 'servicio');
+  const visibles = Math.min(GEO.ranurasVisibles, modelo.cola.length);
+  for (let i = 0; i < visibles; i++) crearFicha(modelo.cola[i].id, GEO.ranura(i), 'cola');
+}
+
+function moverFichas(dt) {
+  const puesto = new Map();
+  const visibles = Math.min(GEO.ranurasVisibles, modelo.cola.length);
+  for (let i = 0; i < visibles; i++) {
+    const id = modelo.cola[i].id;
+    puesto.set(id, i);
+    if (!fichas.has(id)) crearFicha(id, GEO.entradaCola, 'cola'); // venía oculta, más atrás
+  }
+  const k = 1 - Math.exp(-dt / 80);
+  for (const f of fichas.values()) {
+    let destino;
+    if (f.estado === 'servicio') destino = GEO.pod;
+    else if (f.estado === 'saliendo') destino = GEO.salida;
+    else if (f.estado === 'rechazada') destino = GEO.rechazo;
+    else if (puesto.has(f.id)) destino = GEO.ranura(puesto.get(f.id));
+    else { f.nodo.remove(); fichas.delete(f.id); continue; }
+    f.x += (destino.x - f.x) * k;
+    f.y += (destino.y - f.y) * k;
+    const lejos = Math.hypot(destino.x - f.x, destino.y - f.y);
+    if ((f.estado === 'saliendo' || f.estado === 'rechazada') && lejos < 3) {
+      f.nodo.remove();
+      fichas.delete(f.id);
+      continue;
+    }
+    f.nodo.setAttribute('transform', `translate(${f.x.toFixed(1)} ${f.y.toFixed(1)})`);
+  }
+  // Si la animación va muy rápida se acumulan fichas de salida: se descartan.
+  if (fichas.size > 60) {
+    for (const f of [...fichas.values()]) {
+      if (f.estado === 'saliendo' || f.estado === 'rechazada') { f.nodo.remove(); fichas.delete(f.id); }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Diagrama
+// ---------------------------------------------------------------------------
+function pintarEstatico() {
+  const dl = crearDistribucion(esc.llegadas);
+  $('d-dist-llegadas').textContent = resumenDistribucion(esc.llegadas);
+  $('d-dist-servicio').textContent = resumenDistribucion(esc.servicio);
+  $('d-lambda').textContent = `λ = ${corto(1000 / dl.media)} req/s`;
+  const limitada = esc.capacidadCola !== null;
+  $('d-cola-tipo').textContent = limitada
+    ? `FIFO · ${esc.capacidadCola === 1 ? 'cabe 1' : `caben ${esc.capacidadCola}`}`
+    : 'FIFO · sin límite';
+  $('rama-rechazo').classList.toggle('apagado', !limitada);
+  const ranuras = $('ranuras');
+  ranuras.replaceChildren();
+  const cuantas = limitada ? Math.min(esc.capacidadCola, GEO.ranurasVisibles) : GEO.ranurasVisibles;
+  for (let i = 0; i < cuantas; i++) {
+    const p = GEO.ranura(i);
+    ranuras.append(elSvg('circle', { class: 'ranura', cx: p.x, cy: p.y, r: 10 }));
+  }
+  $('kendall').textContent = teoria.kendall;
+  $('teoria-nombre').textContent = teoria.nombre;
+  const nota = $('teoria-nota');
+  nota.hidden = !teoria.nota;
+  nota.textContent = teoria.nota || '';
+  const hayTeoria = teoria.metodo === 'exacta' || teoria.metodo === 'aproximada';
+  $('ley-g1-teo').hidden = !hayTeoria;
+  $('ley-g2-teo').hidden = !hayTeoria;
+  $('ley-g3-teo').hidden = !teoria.densidadW;
+}
+
+function pintarDiagrama() {
+  $('d-llegadas').textContent = `llegadas: ${entero(modelo.llegadas)}`;
+  $('d-atendidas').textContent = entero(modelo.atendidas);
+  $('d-rechazadas').textContent = `rechazadas: ${entero(modelo.rechazadas)}`;
+  const ocultas = modelo.cola.length - Math.min(modelo.cola.length, GEO.ranurasVisibles);
+  $('d-en-cola').textContent = `en cola: ${entero(modelo.cola.length)}${ocultas > 0 ? ` (${entero(ocultas)} sin dibujar)` : ''}`;
+  $('d-pod-estado').textContent = modelo.enServicio ? `atiende #${modelo.enServicio.id}` : 'libre';
+}
+
+function pintarReloj() {
+  const s = modelo.enServicio;
+  const fraccion = s && s.servicio > 0 ? Math.max(0, Math.min(1, (relojVisual - s.tInicio) / s.servicio)) : 0;
+  $('d-avance').setAttribute('width', (124 * fraccion).toFixed(1));
+  $('reloj-valor').textContent = `${num(relojVisual, relojVisual >= 100000 ? 0 : 1)} ms`;
+  $('avance-horizonte').style.width = `${Math.min(100, (relojVisual / esc.horizonte) * 100)}%`;
+  const estado = modelo.terminado ? ' · terminó' : '';
+  $('reloj-detalle').textContent = `${entero(modelo.sim.eventosEjecutados)} eventos · horizonte ${corto(esc.horizonte / 1000)} s${estado}`;
+}
+
+function pintarBotones() {
+  $('btn-correr').textContent = corriendo ? 'Pausar' : 'Correr';
+  $('btn-correr').disabled = modelo.terminado || rapido;
+  $('btn-paso').disabled = modelo.terminado || rapido;
+  $('btn-final').disabled = modelo.terminado || rapido;
+}
+
+// ---------------------------------------------------------------------------
+// El motor por dentro
+// ---------------------------------------------------------------------------
+function describir(r) {
+  const [a, b] = r.novedades;
+  if (r.tipo === 'llegada') {
+    if (a.tipo === 'inicia') return `#${a.id} llega y pasa directo al pod`;
+    if (a.tipo === 'encola') return `#${a.id} llega y espera (${entero(r.cola)} en cola)`;
+    return `#${a.id} llega con la cola llena: rechazada`;
+  }
+  if (r.tipo === 'fin-servicio') {
+    return `#${a.id} sale tras ${adapt(a.respuesta)} ms${b ? `; entra #${b.id}` : '; el pod queda libre'}`;
+  }
+  return 'Se descartan las estadísticas del arranque';
+}
+
+function celdaEvento(tipo) {
+  const td = el('td');
+  td.append(el('span', { class: 'tipo-evento', 'data-tipo': tipo }, NOMBRE_EVENTO[tipo] || tipo));
+  return td;
+}
+
+function pintarMotor() {
+  $('e-sistema').textContent = entero(modelo.enSistema);
+  $('e-cola').textContent = entero(modelo.cola.length);
+  $('e-pod').textContent = modelo.enServicio ? 'ocupado' : 'libre';
+
+  const lista = $('tabla-lista');
+  lista.replaceChildren();
+  modelo.sim.lista.ordenados().forEach((ev, i) => {
+    const tr = el('tr', i === 0 ? { class: 'proximo' } : {});
+    tr.append(
+      el('td', { class: 'num' }, num(ev.t, 2)),
+      celdaEvento(ev.tipo),
+      el('td', { class: 'num' }, ev.datos.id ? `#${ev.datos.id}` : '—'),
+      el('td', { class: 'num' }, num(Math.max(0, ev.t - relojVisual), 2)),
+    );
+    lista.append(tr);
+  });
+
+  const cuerpo = $('tabla-bitacora');
+  cuerpo.replaceChildren();
+  if (bitacora.length === 0) {
+    const tr = el('tr');
+    tr.append(el('td', { colspan: 4, class: 'tenue' }, 'Todavía no se ha ejecutado ningún evento. Pulsa “Un evento” para ver el primero.'));
+    cuerpo.append(tr);
+    return;
+  }
+  for (let i = bitacora.length - 1; i >= Math.max(0, bitacora.length - 40); i--) {
+    const r = bitacora[i];
+    const tr = el('tr');
+    tr.append(el('td', { class: 'num' }, num(r.t, 2)), celdaEvento(r.tipo), el('td', {}, describir(r)), el('td', { class: 'num' }, entero(r.n)));
+    cuerpo.append(tr);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Indicadores y verificación
+// ---------------------------------------------------------------------------
+const reqSeg = (x) => (Number.isFinite(x) ? `${adapt(x * 1000)} req/s` : '—');
+const ms = (x) => (Number.isFinite(x) ? `${adapt(x)} ms` : '—');
+const FILAS = [
+  { id: 'rho', nombre: 'Utilización del pod', simbolo: 'ρ', fmt: (x) => pct(x) },
+  { id: 'L', nombre: 'Peticiones en el sistema', simbolo: 'L', fmt: adapt },
+  { id: 'Lq', nombre: 'Peticiones en cola', simbolo: 'Lq', fmt: adapt },
+  { id: 'W', nombre: 'Tiempo de respuesta medio', simbolo: 'W', fmt: ms },
+  { id: 'Wq', nombre: 'Espera en cola media', simbolo: 'Wq', fmt: ms },
+  { id: 'p95', nombre: 'Tiempo de respuesta p95', simbolo: 'p95', fmt: ms, teo: (t) => (t.percentilW ? t.percentilW(0.95) : NaN) },
+  { id: 'X', nombre: 'Rendimiento', simbolo: 'X', fmt: reqSeg },
+  { id: 'pRechazo', nombre: 'Peticiones rechazadas', simbolo: '', fmt: (x) => pct(x, 2) },
+];
+
+function pintarMetricas() {
+  resultados = modelo.resultados();
+  const r = resultados;
+  const hayTeoria = teoria.metodo === 'exacta' || teoria.metodo === 'aproximada';
+  const cuerpo = $('tabla-metricas');
+  cuerpo.replaceChildren();
+  for (const f of FILAS) {
+    const sim = r[f.id];
+    const teo = hayTeoria ? (f.teo ? f.teo(teoria) : teoria[f.id]) : NaN;
+    const tr = el('tr');
+    const celdaDif = el('td', { class: 'num' });
+    if (Number.isFinite(sim) && Number.isFinite(teo)) {
+      const caja = el('span', { class: 'dif' });
+      if (Math.abs(teo) < 1e-12) {
+        caja.append(el('span', {}, Math.abs(sim) < 1e-12 ? 'igual' : '—'));
+        if (Math.abs(sim) < 1e-12 && teoria.metodo === 'exacta') caja.append(el('span', { class: 'ok', title: 'Coincide con la teoría' }, '✓'));
+      } else {
+        const d = (sim - teo) / teo;
+        caja.append(el('span', {}, `${d > 0 ? '+' : ''}${num(d * 100, 1)} %`));
+        if (Math.abs(d) <= 0.05 && teoria.metodo === 'exacta') caja.append(el('span', { class: 'ok', title: 'A menos del 5 % de la teoría' }, '✓'));
+      }
+      celdaDif.append(caja);
+    } else {
+      celdaDif.textContent = '—';
+    }
+    tr.append(
+      el('td', {}, f.nombre),
+      el('td', { class: 'simbolo' }, f.simbolo),
+      el('td', { class: 'num' }, f.fmt(sim)),
+      el('td', { class: 'num' }, Number.isFinite(teo) ? f.fmt(teo) : '—'),
+      celdaDif,
+    );
+    cuerpo.append(tr);
+  }
+  const calent = esc.calentamiento > 0 ? ` Se descartan los primeros ${corto(esc.calentamiento / 1000)} s.` : '';
+  $('metricas-nota').textContent =
+    `Medido sobre ${entero(r.n)} peticiones atendidas en ${corto(r.duracionObservada / 1000)} s simulados.${calent} ` +
+    (teoria.metodo === 'exacta'
+      ? 'La marca ✓ aparece cuando lo simulado queda a menos del 5 % del valor teórico. Con pocas peticiones la diferencia es grande y baja al crecer la muestra.'
+      : teoria.metodo === 'aproximada'
+        ? 'El valor teórico es una aproximación, así que una diferencia de varios puntos no indica un error del simulador.'
+        : 'Sin referencia teórica, la verificación descansa en los invariantes de la derecha.');
+
+  pintarVerificacion(r);
+}
+
+function pintarVerificacion(r) {
+  const little = r.lambdaEfectiva * r.W;
+  const difLittle = Number.isFinite(little) && little > 0 ? Math.abs(r.L - little) / little : NaN;
+  const hayMuestra = r.n >= 500;
+  const items = [
+    {
+      titulo: 'Conservación de peticiones',
+      estado: r.conserva ? 'bien' : 'falla',
+      detalle: `llegadas ${entero(r.llegadas)} = atendidas ${entero(r.atendidas)} + rechazadas ${entero(r.rechazadas)} + en el sistema ${entero(r.enSistema)}`,
+    },
+    {
+      titulo: 'El reloj nunca retrocede',
+      estado: relojIntegro ? 'bien' : 'falla',
+      detalle: `${entero(r.eventos)} eventos ejecutados en orden de tiempo`,
+    },
+    {
+      titulo: 'Ley de Little: L = λ · W',
+      estado: !hayMuestra ? 'pendiente' : difLittle <= 0.03 ? 'bien' : 'pendiente',
+      detalle: hayMuestra || Number.isFinite(difLittle)
+        ? `L = ${adapt(r.L)} frente a λ·W = ${adapt(little)} (diferencia ${pct(difLittle)})`
+        : 'necesita peticiones atendidas',
+    },
+    {
+      titulo: 'Corrida reproducible',
+      estado: 'info',
+      detalle: `semilla ${esc.semilla} · huella ${r.huella} tras ${entero(r.eventos)} eventos`,
+    },
+  ];
+  const SELLO = { bien: '✓ Cumple', falla: '✕ Falla', pendiente: '… Faltan datos', info: 'Huella' };
+  const lista = $('verificaciones');
+  lista.replaceChildren();
+  for (const it of items) {
+    const li = el('li');
+    const cuerpo = el('div');
+    cuerpo.append(el('strong', {}, it.titulo), el('span', { class: 'detalle' }, it.detalle));
+    li.append(el('span', { class: 'sello', 'data-estado': it.estado === 'info' ? 'pendiente' : it.estado }, SELLO[it.estado]), cuerpo);
+    lista.append(li);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Gráficos del applet (la clase Grafico está en web/comun/base.js)
+// ---------------------------------------------------------------------------
+let gN, gW, gH;
+
+function graficoN() {
+  const hayTeoria = Number.isFinite(teoria.L);
+  const pts = serieN.slice(-300);
+  const tFin = Math.max(relojVisual, pts[pts.length - 1].t);
+  const t0 = pts[0].t;
+  if (!(tFin > t0)) return gN.dibujar({ vacio: 'Aún no hay cambios de estado' });
+  const enSeg = tFin >= 20000;
+  const u = enSeg ? 1000 : 1;
+  let maxN = 4;
+  for (const p of pts) if (p.n > maxN) maxN = p.n;
+  if (hayTeoria) maxN = Math.max(maxN, teoria.L * 1.25);
+  gN.dibujar({
+    x: { min: t0 / u, max: tFin / u, titulo: `tiempo simulado (${enSeg ? 's' : 'ms'})` },
+    y: { min: 0, max: maxN },
+    capas: ({ px, py, x0, x1, y0 }) => {
+      let d = `M${px(pts[0].t / u).toFixed(1)} ${py(pts[0].n).toFixed(1)}`;
+      for (let i = 1; i < pts.length; i++) d += `H${px(pts[i].t / u).toFixed(1)}V${py(pts[i].n).toFixed(1)}`;
+      d += `H${px(tFin / u).toFixed(1)}`;
+      let s = `<path class="a-sim" d="${d}V${y0}H${px(pts[0].t / u).toFixed(1)}Z"/><path class="l-sim" d="${d}"/>`;
+      if (hayTeoria) {
+        const y = py(teoria.L);
+        s += `<line class="l-teo" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/>`;
+        s += `<text class="directa" x="${x1}" y="${y - 5}" text-anchor="end">L = ${adapt(teoria.L)}</text>`;
+      }
+      return s;
+    },
+    puntos: pts.map((p) => ({
+      x: p.t / u,
+      titulo: `t = ${enSeg ? `${num(p.t / 1000, 2)} s` : `${num(p.t, 2)} ms`}`,
+      filas: [{ clave: '', nombre: 'en el sistema', valor: entero(p.n) }]
+        .concat(hayTeoria ? [{ clave: 'teo', nombre: 'L teórico', valor: adapt(teoria.L) }] : []),
+    })),
+  });
+}
+
+function graficoW() {
+  const hayTeoria = Number.isFinite(teoria.W);
+  if (serieW.length < 2) return gW.dibujar({ vacio: 'Aún no hay peticiones atendidas' });
+  const fin = serieW[serieW.length - 1];
+  let maxW = 0;
+  for (const p of serieW) if (p.w > maxW) maxW = p.w;
+  if (hayTeoria) maxW = Math.max(maxW, teoria.W);
+  gW.dibujar({
+    x: { min: 0, max: fin.n, titulo: 'peticiones atendidas' },
+    y: { min: 0, max: maxW * 1.15 },
+    capas: ({ px, py, x0, x1 }) => {
+      let d = '';
+      serieW.forEach((p, i) => { d += `${i ? 'L' : 'M'}${px(p.n).toFixed(1)} ${py(p.w).toFixed(1)}`; });
+      let s = '';
+      if (hayTeoria) {
+        const y = py(teoria.W);
+        s += `<line class="l-teo" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/>`;
+        s += `<text class="directa" x="${x0 + 6}" y="${y - 5}">W = ${adapt(teoria.W)} ms</text>`;
+      }
+      s += `<path class="l-sim" d="${d}"/><circle class="punto" cx="${px(fin.n)}" cy="${py(fin.w)}" r="4.5"/>`;
+      const arriba = !hayTeoria || fin.w >= teoria.W;
+      s += `<text class="directa" x="${x1}" y="${py(fin.w) + (arriba ? -9 : 17)}" text-anchor="end">${adapt(fin.w)} ms</text>`;
+      return s;
+    },
+    puntos: serieW.map((p) => ({
+      x: p.n,
+      titulo: `${entero(p.n)} peticiones`,
+      filas: [{ clave: '', nombre: 'media simulada', valor: `${adapt(p.w)} ms` }]
+        .concat(hayTeoria ? [{ clave: 'teo', nombre: 'W teórico', valor: `${adapt(teoria.W)} ms` }] : []),
+    })),
+  });
+}
+
+function graficoH() {
+  const datos = resultados ? resultados.respuestasOrdenadas : [];
+  const n = datos.length;
+  if (n < 10) return gH.dibujar({ vacio: 'Se necesitan al menos 10 peticiones atendidas' });
+  const tope = percentil(datos, 0.99) || datos[n - 1] || 1;
+  const CUBETAS = 24;
+  const anchoCubeta = tope / CUBETAS;
+  const cuenta = new Array(CUBETAS).fill(0);
+  for (let i = 0; i < n; i++) {
+    const v = datos[i];
+    if (v > tope) break;
+    cuenta[Math.min(CUBETAS - 1, Math.floor(v / anchoCubeta))]++;
+  }
+  let maxC = Math.max(...cuenta);
+  const densidad = teoria.densidadW;
+  if (densidad) maxC = Math.max(maxC, n * anchoCubeta * densidad(0));
+  const p50 = percentil(datos, 0.5);
+  const p95 = percentil(datos, 0.95);
+  gH.dibujar({
+    x: { min: 0, max: tope, titulo: 'tiempo de respuesta (ms)' },
+    y: { min: 0, max: maxC * 1.08 },
+    capas: ({ px, py, y0, y1 }) => {
+      let s = '';
+      cuenta.forEach((c, i) => {
+        const xa = px(i * anchoCubeta) + 1;
+        const xb = px((i + 1) * anchoCubeta) - 1;
+        const y = py(c);
+        const r = Math.min(3, (xb - xa) / 2, y0 - y);
+        if (c > 0) {
+          s += `<path class="b-sim" data-barra="${i}" d="M${xa.toFixed(1)} ${y0}V${(y + r).toFixed(1)}q0 ${-r} ${r} ${-r}H${(xb - r).toFixed(1)}q${r} 0 ${r} ${r}V${y0}Z"/>`;
+        }
+      });
+      if (densidad) {
+        let d = '';
+        for (let i = 0; i <= 48; i++) {
+          const x = (tope * i) / 48;
+          d += `${i ? 'L' : 'M'}${px(x).toFixed(1)} ${py(n * anchoCubeta * densidad(x)).toFixed(1)}`;
+        }
+        s += `<path class="l-teo" d="${d}"/>`;
+      }
+      for (const [nombre, v] of [['p50', p50], ['p95', p95]]) {
+        if (v <= tope) {
+          s += `<line class="marca-p" x1="${px(v)}" x2="${px(v)}" y1="${y1 + 10}" y2="${y0}"/>`;
+          s += `<text class="directa" x="${px(v)}" y="${y1 + 6}" text-anchor="middle">${nombre}</text>`;
+        }
+      }
+      return s;
+    },
+    puntos: cuenta.map((c, i) => ({
+      x: (i + 0.5) * anchoCubeta,
+      barra: i,
+      titulo: `${adapt(i * anchoCubeta)} a ${adapt((i + 1) * anchoCubeta)} ms`,
+      filas: [{ clave: 'caja', nombre: `peticiones (${pct(c / n)})`, valor: entero(c) }],
+    })),
+  });
+}
+
+function pintarGraficos() {
+  graficoN();
+  graficoW();
+  graficoH();
+}
+
+// ---------------------------------------------------------------------------
+// Formularios
+// ---------------------------------------------------------------------------
+const GRUPOS = { lleg: 'llegadas', serv: 'servicio' };
+
+function pintarFormDist(pref) {
+  const espec = esc[GRUPOS[pref]];
+  $(`${pref}-tipo`).value = espec.tipo;
+  const cont = $(`${pref}-params`);
+  cont.replaceChildren();
+  for (const p of CATALOGO[espec.tipo].params) {
+    const id = `${pref}-p-${p.id}`;
+    const esLista = p.unidad === 'lista';
+    const campo = el('div', { class: `campo${esLista ? ' ancho' : ''}` });
+    const entrada = esLista
+      ? el('input', { type: 'text', id, class: 'dato', inputmode: 'decimal' })
+      : el('input', { type: 'number', id, min: p.min, step: p.entero ? 1 : 'any' });
+    entrada.value = esLista ? espec[p.id].join('; ') : espec[p.id];
+    entrada.addEventListener('change', () => leerFormDist(pref));
+    campo.append(
+      el('label', { for: id }, esLista ? 'Valores medidos (ms), separados por punto y coma' : `${p.etiqueta}${p.unidad === 'tiempo' ? ' (ms)' : ''}`),
+      entrada,
+    );
+    cont.append(campo);
+  }
+  const d = crearDistribucion(espec);
+  const tasa = pref === 'lleg' ? `λ = ${corto(1000 / d.media)} req/s` : `μ = ${corto(1000 / d.media)} req/s`;
+  $(`${pref}-resumen`).textContent = `media ${corto(d.media)} ms · CV² = ${corto(d.cv2)} · ${tasa}`;
+  vistaDistribucion($(`${pref}-vista`), espec);
+}
+
+function leerFormDist(pref) {
+  const tipo = $(`${pref}-tipo`).value;
+  const espec = { tipo };
+  for (const p of CATALOGO[tipo].params) {
+    const bruto = $(`${pref}-p-${p.id}`).value;
+    espec[p.id] = p.unidad === 'lista'
+      ? bruto.split(/[;\s]+/).filter(Boolean).map((x) => Number(x.replace(',', '.')))
+      : Number(bruto);
+  }
+  aplicarCambio({ [GRUPOS[pref]]: espec }, `${pref}-error`);
+}
+
+function mostrarError(id, mensaje) {
+  for (const otro of ['lleg-error', 'serv-error', 'corrida-error', 'json-error']) {
+    $(otro).hidden = otro !== id || !mensaje;
+    if (otro === id) $(otro).textContent = mensaje || '';
+  }
+}
+
+function aplicarCambio(cambios, idError) {
+  try {
+    const nuevo = validarEscenario({ ...esc, ...cambios, nombre: 'Personalizado' });
+    mostrarError(idError, '');
+    fijarEscenario(nuevo, 'propio');
+  } catch (e) {
+    mostrarError(idError, e.message);
+  }
+}
+
+function pintarFormularios() {
+  pintarFormDist('lleg');
+  pintarFormDist('serv');
+  const limitada = esc.capacidadCola !== null;
+  $('cola-limitada').checked = limitada;
+  $('cola-capacidad').disabled = !limitada;
+  if (limitada) $('cola-capacidad').value = esc.capacidadCola;
+  $('horizonte').value = esc.horizonte / 1000;
+  $('calentamiento').value = esc.calentamiento / 1000;
+  $('semilla').value = esc.semilla;
+
+  const carga = teoriaPara(esc).cargaOfrecida;
+  const medidor = $('medidor-carga');
+  $('medidor-relleno').style.width = `${(Math.min(carga, 1.5) / 1.5) * 100}%`;
+  let nivel = 'normal';
+  let lectura = 'el pod da abasto';
+  if (carga >= 1) {
+    nivel = 'critico';
+    lectura = limitada ? 'sobrecarga: habrá rechazos' : 'saturado: la cola crece sin límite';
+  } else if (carga >= 0.9) {
+    nivel = 'alerta';
+    lectura = 'cerca del límite: esperas largas';
+  }
+  medidor.dataset.nivel = nivel;
+  const texto = $('medidor-texto');
+  texto.replaceChildren(document.createTextNode('Carga ofrecida ρ = λ/μ = '), el('strong', {}, corto(carga)), document.createTextNode(` · ${lectura}`));
+}
+
+function fijarEscenario(nuevo, idPreajuste) {
+  esc = nuevo;
+  $('preajuste').value = idPreajuste;
+  $('json-texto').value = JSON.stringify(esc, null, 2);
+  $('json-estado').textContent = '';
+  pintarFormularios();
+  reiniciar();
+}
+
+function leerCorrida() {
+  const limitada = $('cola-limitada').checked;
+  $('cola-capacidad').disabled = !limitada;
+  aplicarCambio({
+    capacidadCola: limitada ? Number($('cola-capacidad').value) : null,
+    horizonte: Number($('horizonte').value) * 1000,
+    calentamiento: Number($('calentamiento').value) * 1000,
+    semilla: Number($('semilla').value),
+  }, 'corrida-error');
+}
+
+function pintarVelocidad() {
+  const v = VELOCIDADES[Number($('velocidad').value)];
+  $('velocidad-texto').textContent = `≈ ${corto(v)} ${v === 1 ? 'llegada' : 'llegadas'} por segundo`;
+}
+
+// ---------------------------------------------------------------------------
+// Bucle de animación
+// ---------------------------------------------------------------------------
+let marcaPrevia = 0;
+
+function cuadro(marca) {
+  const dt = Math.min(100, marca - (marcaPrevia || marca));
+  marcaPrevia = marca;
+
+  if (rapido) {
+    const limite = performance.now() + 12;
+    let sigue = true;
+    while (sigue && performance.now() < limite) {
+      for (let i = 0; i < 2000; i++) {
+        const paso = modelo.paso();
+        if (!paso) { sigue = false; break; }
+        procesar(paso, false);
+      }
+    }
+    relojVisual = modelo.reloj;
+    reconstruirFichas();
+    if (modelo.terminado) { rapido = false; marcarTodo(); }
+  } else if (corriendo) {
+    const mediaLlegadas = modelo.distLlegadas.media;
+    relojVisual += (dt / 1000) * VELOCIDADES[Number($('velocidad').value)] * mediaLlegadas;
+    let cuenta = 0;
+    for (;;) {
+      const prox = modelo.sim.proximo();
+      if (!prox || prox.t > relojVisual || prox.t > esc.horizonte) break;
+      procesar(modelo.paso(), true);
+      if (++cuenta > 4000) { relojVisual = modelo.reloj; break; }
+    }
+    if (relojVisual >= esc.horizonte) {
+      relojVisual = esc.horizonte;
+      modelo.paso(); // cierra la corrida en el horizonte
+      corriendo = false;
+      marcarTodo();
+    }
+    pendiente.motor = true;
+  }
+
+  if (!rapido) moverFichas(dt);
+  pintarReloj();
+  pintarBotones();
+  if (pendiente.diagrama && marca - ultimo.diagrama > 60) { pintarDiagrama(); pendiente.diagrama = false; ultimo.diagrama = marca; }
+  if (pendiente.motor && marca - ultimo.motor > 110) { pintarMotor(); pendiente.motor = false; ultimo.motor = marca; }
+  if (pendiente.metricas && marca - ultimo.metricas > 260) { pintarMetricas(); pendiente.metricas = false; ultimo.metricas = marca; }
+  if (pendiente.graficos && marca - ultimo.graficos > 260) { pintarGraficos(); pendiente.graficos = false; ultimo.graficos = marca; }
+  requestAnimationFrame(cuadro);
+}
+
+// ---------------------------------------------------------------------------
+// Arranque
+// ---------------------------------------------------------------------------
+function enfocarGrupo(idGrupo, idCampo) {
+  const grupo = $(idGrupo);
+  grupo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  grupo.classList.add('resaltado');
+  setTimeout(() => grupo.classList.remove('resaltado'), 1800);
+  $(idCampo).focus({ preventScroll: true });
+}
+
+function conectarBloque(idBloque, idGrupo, idCampo) {
+  const b = $(idBloque);
+  b.addEventListener('click', () => enfocarGrupo(idGrupo, idCampo));
+  b.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); enfocarGrupo(idGrupo, idCampo); }
+  });
+}
+
+function iniciar() {
+  const sel = $('preajuste');
+  for (const p of PREAJUSTES) sel.append(el('option', { value: p.id }, p.esc.nombre));
+  sel.append(el('option', { value: 'propio' }, 'Personalizado'));
+  sel.addEventListener('change', () => {
+    const p = PREAJUSTES.find((x) => x.id === sel.value);
+    if (p) { mostrarError('', ''); fijarEscenario(validarEscenario(p.esc), p.id); }
+    else sel.value = 'propio';
+  });
+
+  for (const pref of ['lleg', 'serv']) {
+    const s = $(`${pref}-tipo`);
+    for (const [tipo, info] of Object.entries(CATALOGO)) s.append(el('option', { value: tipo }, info.etiqueta));
+    s.addEventListener('change', () => {
+      const mediaActual = crearDistribucion(esc[GRUPOS[pref]]).media;
+      aplicarCambio({ [GRUPOS[pref]]: especPorDefecto(s.value, mediaActual) }, `${pref}-error`);
+    });
+  }
+  for (const id of ['cola-limitada', 'cola-capacidad', 'horizonte', 'calentamiento', 'semilla']) {
+    $(id).addEventListener('change', leerCorrida);
+  }
+  $('btn-semilla').addEventListener('click', () => {
+    $('semilla').value = 1 + Math.floor(Math.random() * 99999);
+    leerCorrida();
+  });
+
+  $('btn-correr').addEventListener('click', () => { if (!modelo.terminado) corriendo = !corriendo; });
+  $('btn-paso').addEventListener('click', unEvento);
+  $('btn-final').addEventListener('click', () => { if (!modelo.terminado) { corriendo = false; rapido = true; } });
+  $('btn-reiniciar').addEventListener('click', reiniciar);
+  $('velocidad').addEventListener('input', pintarVelocidad);
+
+  $('btn-json-aplicar').addEventListener('click', () => {
+    try {
+      const nuevo = validarEscenario(JSON.parse($('json-texto').value));
+      mostrarError('json-error', '');
+      const igual = PREAJUSTES.find((p) => JSON.stringify(validarEscenario(p.esc)) === JSON.stringify(nuevo));
+      fijarEscenario(nuevo, igual ? igual.id : 'propio');
+      $('json-estado').textContent = 'Escenario aplicado';
+    } catch (e) {
+      mostrarError('json-error', e instanceof SyntaxError ? `El texto no es JSON válido: ${e.message}` : e.message);
+    }
+  });
+  $('btn-json-copiar').addEventListener('click', async () => {
+    const area = $('json-texto');
+    try {
+      await navigator.clipboard.writeText(area.value);
+      $('json-estado').textContent = 'Copiado';
+    } catch {
+      area.focus();
+      area.select();
+      $('json-estado').textContent = 'Texto seleccionado: cópialo con Ctrl+C';
+    }
+  });
+
+  conectarBloque('b-fuente', 'fs-llegadas', 'lleg-tipo');
+  conectarBloque('b-pod', 'fs-servicio', 'serv-tipo');
+  conectarBloque('b-cola', 'fs-corrida', 'cola-limitada');
+
+  gN = new Grafico('g-n');
+  gW = new Grafico('g-w');
+  gH = new Grafico('g-h');
+  let espera = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(espera);
+    espera = setTimeout(() => {
+      vistaDistribucion($('lleg-vista'), esc.llegadas);
+      vistaDistribucion($('serv-vista'), esc.servicio);
+      marcarTodo();
+    }, 150);
+  });
+
+  pintarVelocidad();
+  fijarEscenario(esc, 'mm1');
+  // La página abre con 30 s ya simulados para que el tablero no esté vacío.
+  adelantarHasta(30000);
+  requestAnimationFrame(cuadro);
+}
+
+iniciar();
+
+})();
+</script>
+</body>
+</html>

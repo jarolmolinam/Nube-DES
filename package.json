@@ -1,0 +1,11 @@
+{
+  "name": "des-nube",
+  "version": "0.1.0",
+  "description": "Applets de simulación de eventos discretos de infraestructura nativa de nube, para el curso Modelos y Simulación",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "node construir.mjs"
+  }
+}

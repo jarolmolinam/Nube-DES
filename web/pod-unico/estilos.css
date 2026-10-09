@@ -1,0 +1,24 @@
+/* Applet 1: diagrama de bloques en SVG. Azul = simulado, naranja = teórico. */
+#diagrama { display: block; width: 100%; min-width: 760px; height: auto; }
+#diagrama text { font-family: var(--f-ui); fill: var(--tinta); }
+#diagrama .t-bloque { font-family: var(--f-titulo); font-weight: 600; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+#diagrama .t-sub { font-size: 11.5px; fill: var(--tinta-2); }
+#diagrama .t-dato { font-family: var(--f-dato); font-size: 12px; }
+#diagrama .t-cuenta { font-family: var(--f-dato); font-size: 12px; fill: var(--tinta-2); }
+#diagrama .bloque > rect.caja { fill: var(--superficie); stroke: var(--linea-fuerte); stroke-width: 1.5; }
+#diagrama .bloque[tabindex] { cursor: pointer; }
+#diagrama .bloque[tabindex]:hover > rect.caja, #diagrama .bloque[tabindex]:focus-visible > rect.caja { stroke: var(--sim); stroke-width: 2; }
+#diagrama .bloque:focus-visible { outline: none; }
+#diagrama .contenedor { fill: var(--pozo); stroke: var(--linea-fuerte); stroke-width: 1; stroke-dasharray: 4 3; }
+#diagrama .cable { fill: none; stroke: var(--tinta-2); stroke-width: 1.5; }
+#diagrama .punta { fill: var(--tinta-2); }
+#diagrama .puerto { fill: var(--superficie); stroke: var(--tinta-2); stroke-width: 1.5; }
+#diagrama .ranura { fill: none; stroke: var(--linea); stroke-width: 1; }
+#diagrama .barra-fondo { fill: var(--linea); }
+#diagrama .barra-avance { fill: var(--sim); }
+#capa-fichas { pointer-events: none; }
+#diagrama .ficha circle { fill: var(--sim); stroke: var(--superficie); stroke-width: 2; }
+#diagrama .ficha text { fill: var(--sobre-sim); font-family: var(--f-dato); font-size: 9.5px; font-weight: 500; text-anchor: middle; }
+#diagrama .ficha.rechazada circle { fill: var(--critico); }
+#diagrama .apagado { opacity: 0.35; }
+#diagrama .t-rechazo { fill: var(--critico-texto); }

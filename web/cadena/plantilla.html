@@ -1,0 +1,195 @@
+<title>Cadena de microservicios DES</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+/*__ESTILOS__*/
+</style>
+<!--CUERPO-->
+<div class="pagina">
+
+  <header class="cabecera">
+    <div>
+      <p class="antetitulo">DES en la nube · Applet 2</p>
+      <h1>Una cadena de microservicios sobre un nodo</h1>
+      <p class="bajada">La petición recorre autenticación, catálogo y pagos. Cada réplica reserva CPU y RAM del nodo, el balanceador reparte y el HPA decide cuántas réplicas hacen falta.</p>
+    </div>
+    <div class="selector-escenario">
+      <label for="preajuste">Escenario</label>
+      <select id="preajuste"></select>
+    </div>
+  </header>
+
+  <section class="tarjeta escena" aria-label="Diagrama de bloques del clúster">
+    <div class="lienzo" id="lienzo">
+      <div class="tablero" id="tablero">
+        <svg id="cables" aria-hidden="true"></svg>
+        <div class="cluster" id="cluster"><span class="cluster-rotulo">Clúster de Kubernetes · el orquestador mantiene el estado deseado</span></div>
+
+        <div class="bloque b-nodo" id="b-nodo">
+          <div class="b-cab">
+            <span class="b-titulo" id="nodo-titulo">Nodo</span>
+            <span class="b-sub" id="nodo-pods"></span>
+            <span class="nodo-aviso" id="nodo-aviso" role="status"></span>
+          </div>
+          <div class="recursos">
+            <div class="recurso" id="rec-cpu"><span class="etq">CPU reservada por los requests</span><div class="pista" id="nodo-cpu-pista"></div><span class="dato" id="nodo-cpu-texto"></span></div>
+            <div class="recurso" id="rec-ram"><span class="etq">RAM reservada por los requests</span><div class="pista" id="nodo-ram-pista"></div><span class="dato" id="nodo-ram-texto"></span></div>
+            <div class="recurso" id="rec-uso"><span class="etq">CPU en uso real (últimos 15 s)</span><div class="pista" id="nodo-uso-pista"></div><span class="dato" id="nodo-uso-texto"></span></div>
+          </div>
+        </div>
+
+        <div class="bloque b-llegadas" id="b-llegadas">
+          <div class="b-cab"><span class="b-titulo">Llegadas</span></div>
+          <span class="b-sub">tiempo entre llegadas</span>
+          <span class="dato" id="ll-dist"></span>
+          <span class="dato" id="ll-tasa"></span>
+          <span class="dato tenue" id="ll-cuenta"></span>
+        </div>
+
+        <div id="bloques-servicio"></div>
+
+        <div class="bloque b-hpa" id="b-hpa">
+          <div class="b-cab">
+            <span class="b-titulo">HPA · autoescalador horizontal</span>
+            <span class="hpa-ctrl"><label for="hpa-modo">Modo</label><select id="hpa-modo"></select></span>
+            <span class="b-sub" id="hpa-ciclo"></span>
+          </div>
+          <div class="hpa-cols" id="hpa-cols"></div>
+        </div>
+
+        <div class="bloque b-salida" id="b-salida">
+          <div class="b-cab"><span class="b-titulo">HTTP 200</span></div>
+          <span class="b-sub">respuestas</span>
+          <span class="dato" id="sal-cuenta">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="avance-horizonte" aria-hidden="true"><div id="avance-horizonte"></div></div>
+    <div class="transporte">
+      <div class="botones">
+        <button type="button" class="principal" id="btn-correr">Correr</button>
+        <button type="button" id="btn-tramo">Avanzar 15 s</button>
+        <button type="button" id="btn-final">Hasta el final</button>
+        <button type="button" id="btn-reiniciar">Reiniciar</button>
+      </div>
+      <div class="velocidad">
+        <label for="velocidad">Velocidad: <span id="velocidad-texto"></span></label>
+        <input type="range" id="velocidad" min="0" max="7" step="1" value="4">
+      </div>
+      <div class="reloj">
+        <span class="etiqueta">Reloj de simulación</span>
+        <span class="reloj-valor" id="reloj-valor">0,0 s</span>
+        <span class="tenue" id="reloj-detalle"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="tarjeta" aria-labelledby="t-obs">
+    <header><h2 id="t-obs">Observabilidad: métricas</h2><p>Una muestra por segundo, como las que recoge el servidor de métricas del clúster.</p></header>
+    <div class="cifras" id="cifras"></div>
+  </section>
+
+  <div class="rejilla-2">
+    <section class="tarjeta" aria-labelledby="t-f1">
+      <header><h2 id="t-f1">Uso de CPU frente al request</h2><p>La métrica que observa el HPA</p></header>
+      <div class="franjas" id="f-cpu"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-f2">
+      <header><h2 id="t-f2">Réplicas listas</h2><p>Pods que ya reciben peticiones</p></header>
+      <div class="franjas" id="f-rep"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-f3">
+      <header><h2 id="t-f3">Peticiones en cola</h2><p>Cada servicio con su propia escala</p></header>
+      <div class="franjas" id="f-cola"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-f4">
+      <header><h2 id="t-f4">Latencia y tráfico</h2><p>Extremo a extremo, por segundo</p></header>
+      <div class="franjas" id="f-lat"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+  </div>
+
+  <div class="rejilla-2">
+    <section class="tarjeta" aria-labelledby="t-logs">
+      <header>
+        <h2 id="t-logs">Observabilidad: logs</h2>
+        <div class="filtros" id="filtros-log" role="group" aria-label="Filtrar los logs"></div>
+      </header>
+      <pre class="registro" id="registro" tabindex="0" aria-label="Registro de eventos del clúster"></pre>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-trazas">
+      <header><h2 id="t-trazas">Observabilidad: trazas</h2><p>Últimas peticiones completadas</p></header>
+      <div class="desliza">
+        <table aria-label="Trazas de las últimas peticiones">
+          <thead><tr><th class="num">Traza</th><th class="num">Total (ms)</th><th>Recorrido</th><th>Estancia por servicio (ms)</th></tr></thead>
+          <tbody id="tabla-trazas"></tbody>
+        </table>
+      </div>
+      <p class="leyenda-trazas" id="leyenda-trazas"></p>
+    </section>
+  </div>
+
+  <section class="tarjeta" aria-labelledby="t-config">
+    <header><h2 id="t-config">Configuración del escenario</h2><p>Cambiar un valor aquí reinicia la corrida. Las réplicas y el modo del HPA también se cambian en vivo desde los bloques.</p></header>
+    <p class="error" id="config-error" hidden></p>
+    <div class="config" id="config"></div>
+  </section>
+
+  <div class="resultados">
+    <section class="tarjeta" aria-labelledby="t-res">
+      <header>
+        <h2 id="t-res">Simulación frente a teoría</h2>
+        <p id="teoria-nombre"></p>
+      </header>
+      <p class="aviso" id="teoria-nota" hidden></p>
+      <div class="desliza">
+        <table aria-label="Indicadores simulados y teóricos por servicio">
+          <thead><tr><th>Servicio</th><th class="num">ρ simulado</th><th class="num">ρ teórico</th><th class="num">Espera simulada</th><th class="num">Espera teórica</th><th class="num">Diferencia</th></tr></thead>
+          <tbody id="tabla-teoria"></tbody>
+        </table>
+      </div>
+      <p class="nota" id="teoria-pie"></p>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-ver">
+      <header><h2 id="t-ver">Verificación en vivo</h2></header>
+      <ul class="verificaciones" id="verificaciones"></ul>
+    </section>
+  </div>
+
+  <div class="cierre">
+    <section class="tarjeta" aria-labelledby="t-json">
+      <header><h2 id="t-json">Escenario en JSON</h2><p>El escenario son datos; el simulador es código.</p></header>
+      <label for="json-texto">Definición del escenario</label>
+      <textarea id="json-texto" spellcheck="false"></textarea>
+      <div class="acciones">
+        <button type="button" id="btn-json-aplicar">Aplicar este JSON</button>
+        <button type="button" id="btn-json-copiar">Copiar</button>
+        <span class="tenue" id="json-estado" role="status"></span>
+      </div>
+      <p class="error" id="json-error" hidden></p>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-glos">
+      <header><h2 id="t-glos">De la nube nativa al modelo</h2></header>
+      <div class="desliza">
+        <table>
+          <thead><tr><th>En el clúster</th><th>En la simulación</th></tr></thead>
+          <tbody>
+            <tr><td>Imagen y contenedor</td><td>La receta del servidor y cada servidor en marcha</td></tr>
+            <tr><td>Pod y réplica</td><td>Un servidor más del servicio: la c de M/M/c</td></tr>
+            <tr><td>Service y balanceador</td><td>La regla que elige réplica para cada petición</td></tr>
+            <tr><td>Request de CPU y RAM</td><td>Lo que la réplica reserva en el nodo</td></tr>
+            <tr><td>Limit de CPU</td><td>Tope de velocidad: servicio = trabajo / min(1, limit)</td></tr>
+            <tr><td>Nodo</td><td>Capacidad finita; lo que no cabe queda Pending</td></tr>
+            <tr><td>Orquestador</td><td>Políticas que corrigen la diferencia con lo deseado</td></tr>
+            <tr><td>HPA</td><td>Evento periódico que aplica ⌈réplicas × uso / objetivo⌉</td></tr>
+            <tr><td>Arranque en frío</td><td>Retardo entre pedir una réplica y que atienda</td></tr>
+            <tr><td>Métricas, logs y trazas</td><td>Muestreo, bitácora y tramos de cada entidad</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <p class="pie">Simplificaciones declaradas: un solo nodo; la memoria solo decide si la réplica cabe; cada réplica atiende una petición a la vez; cuando falta CPU se reparte en proporción a los requests; la red es un retardo fijo por salto.</p>
+</div>
+<script>
+/*__CODIGO__*/
+</script>

@@ -1,0 +1,254 @@
+<title>Pod único DES</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<style>
+/*__ESTILOS__*/
+</style>
+<!--CUERPO-->
+<div class="pagina">
+
+  <header class="cabecera">
+    <div>
+      <p class="antetitulo">DES en la nube · Applet 1</p>
+      <h1>Un pod es una cola de un servidor</h1>
+      <p class="bajada">Cada petición es una entidad y el pod la atiende de a una. Elige las distribuciones, avanza evento por evento y compara lo simulado con la teoría de colas.</p>
+    </div>
+    <div class="selector-escenario">
+      <label for="preajuste">Escenario</label>
+      <select id="preajuste"></select>
+    </div>
+  </header>
+
+  <section class="tarjeta escena" aria-label="Diagrama de bloques del modelo">
+    <div class="lienzo">
+      <svg id="diagrama" viewBox="0 0 960 232" role="img" aria-label="Fuente de clientes, cola de espera, pod y respuestas, conectados en serie">
+        <!-- cables -->
+        <path class="cable" d="M174 104 H254"></path><path class="punta" d="M262 104 l-9 -4.5 v9 z"></path>
+        <path class="cable" d="M562 104 H632"></path><path class="punta" d="M640 104 l-9 -4.5 v9 z"></path>
+        <path class="cable" d="M812 104 H850"></path><path class="punta" d="M858 104 l-9 -4.5 v9 z"></path>
+        <g id="rama-rechazo">
+          <path class="cable" d="M218 104 V178"></path><path class="punta" d="M218 186 l-4.5 -9 h9 z"></path>
+          <circle class="puerto" cx="218" cy="104" r="3"></circle>
+          <g class="bloque"><rect class="caja" x="150" y="186" width="136" height="36" rx="3"></rect>
+            <text class="t-bloque t-rechazo" x="162" y="201">HTTP 503</text>
+            <text class="t-cuenta" x="162" y="215" id="d-rechazadas">rechazadas: 0</text></g>
+        </g>
+
+        <!-- fuente -->
+        <g class="bloque" id="b-fuente" tabindex="0" role="button" aria-label="Fuente de clientes: editar la distribución de llegadas">
+          <rect class="caja" x="24" y="52" width="150" height="104" rx="3"></rect>
+          <text class="t-bloque" x="36" y="74">Clientes</text>
+          <text class="t-sub" x="36" y="92">tiempo entre llegadas</text>
+          <text class="t-dato" x="36" y="110" id="d-dist-llegadas">Exp(100)</text>
+          <text class="t-dato" x="36" y="126" id="d-lambda">λ = 10 req/s</text>
+          <text class="t-cuenta" x="36" y="146" id="d-llegadas">llegadas: 0</text>
+          <circle class="puerto" cx="174" cy="104" r="4"></circle>
+        </g>
+
+        <!-- cola -->
+        <g class="bloque" id="b-cola" tabindex="0" role="button" aria-label="Cola de espera: editar su capacidad">
+          <rect class="caja" x="262" y="52" width="300" height="104" rx="3"></rect>
+          <text class="t-bloque" x="274" y="74">Cola de espera</text>
+          <text class="t-sub" x="274" y="92" id="d-cola-tipo">FIFO · sin límite</text>
+          <text class="t-cuenta" x="550" y="74" text-anchor="end" id="d-en-cola">en cola: 0</text>
+          <g id="ranuras"></g>
+          <circle class="puerto" cx="262" cy="104" r="4"></circle>
+          <circle class="puerto" cx="562" cy="104" r="4"></circle>
+        </g>
+
+        <!-- pod -->
+        <g class="bloque" id="b-pod" tabindex="0" role="button" aria-label="Pod: editar la distribución del tiempo de servicio">
+          <rect class="caja" x="640" y="22" width="172" height="164" rx="3"></rect>
+          <text class="t-bloque" x="652" y="44">Pod</text>
+          <text class="t-cuenta" x="800" y="44" text-anchor="end" id="d-pod-estado">libre</text>
+          <rect class="contenedor" x="652" y="54" width="148" height="88" rx="3"></rect>
+          <text class="t-sub" x="660" y="70">contenedor</text>
+          <rect class="barra-fondo" x="664" y="126" width="124" height="5" rx="2.5"></rect>
+          <rect class="barra-avance" id="d-avance" x="664" y="126" width="0" height="5" rx="2.5"></rect>
+          <text class="t-sub" x="652" y="160">tiempo de servicio</text>
+          <text class="t-dato" x="652" y="176" id="d-dist-servicio">Exp(80)</text>
+          <circle class="puerto" cx="640" cy="104" r="4"></circle>
+          <circle class="puerto" cx="812" cy="104" r="4"></circle>
+        </g>
+
+        <!-- sumidero -->
+        <g class="bloque">
+          <rect class="caja" x="858" y="66" width="94" height="76" rx="3"></rect>
+          <text class="t-bloque" x="870" y="88">HTTP 200</text>
+          <text class="t-sub" x="870" y="106">atendidas</text>
+          <text class="t-dato" x="870" y="126" id="d-atendidas">0</text>
+          <circle class="puerto" cx="858" cy="104" r="4"></circle>
+        </g>
+
+        <g id="capa-fichas"></g>
+      </svg>
+    </div>
+    <div class="avance-horizonte" aria-hidden="true"><div id="avance-horizonte"></div></div>
+    <div class="transporte">
+      <div class="botones">
+        <button type="button" class="principal" id="btn-correr">Correr</button>
+        <button type="button" id="btn-paso">Un evento</button>
+        <button type="button" id="btn-final">Hasta el final</button>
+        <button type="button" id="btn-reiniciar">Reiniciar</button>
+      </div>
+      <div class="velocidad">
+        <label for="velocidad">Velocidad de la animación: <span id="velocidad-texto"></span></label>
+        <input type="range" id="velocidad" min="0" max="6" step="1" value="2">
+      </div>
+      <div class="reloj" aria-live="off">
+        <span class="etiqueta">Reloj de simulación</span>
+        <span class="reloj-valor" id="reloj-valor">0 ms</span>
+        <span class="tenue" id="reloj-detalle">0 eventos · horizonte 3 600 s</span>
+      </div>
+    </div>
+  </section>
+
+  <div class="banco">
+    <section class="tarjeta" aria-labelledby="t-param">
+      <header><h2 id="t-param">Modelo de entrada</h2><p>Cambiar un valor reinicia la corrida.</p></header>
+      <div class="grupos">
+        <fieldset id="fs-llegadas">
+          <legend>Llegadas · bloque Clientes</legend>
+          <div class="campos">
+            <div class="campo ancho"><label for="lleg-tipo">Distribución del tiempo entre llegadas</label><select id="lleg-tipo"></select></div>
+          </div>
+          <div class="campos" id="lleg-params"></div>
+          <svg class="vista-dist" id="lleg-vista" aria-hidden="true"></svg>
+          <p class="resumen-dist" id="lleg-resumen"></p>
+          <p class="error" id="lleg-error" hidden></p>
+        </fieldset>
+        <fieldset id="fs-servicio">
+          <legend>Servicio · bloque Pod</legend>
+          <div class="campos">
+            <div class="campo ancho"><label for="serv-tipo">Distribución del tiempo de servicio</label><select id="serv-tipo"></select></div>
+          </div>
+          <div class="campos" id="serv-params"></div>
+          <svg class="vista-dist" id="serv-vista" aria-hidden="true"></svg>
+          <p class="resumen-dist" id="serv-resumen"></p>
+          <p class="error" id="serv-error" hidden></p>
+        </fieldset>
+        <fieldset id="fs-corrida">
+          <legend>Cola y corrida</legend>
+          <div class="medidor" id="medidor-carga" data-nivel="normal">
+            <div class="medidor-pista"><div class="medidor-relleno" id="medidor-relleno"></div><div class="medidor-marca" title="ρ = 1"></div></div>
+            <p class="medidor-texto" id="medidor-texto"></p>
+          </div>
+          <label class="casilla" for="cola-limitada"><input type="checkbox" id="cola-limitada"> Limitar la cola y rechazar lo que no quepa</label>
+          <div class="campos">
+            <div class="campo"><label for="cola-capacidad">Puestos en la cola</label><input type="number" id="cola-capacidad" min="0" step="1" value="4" disabled></div>
+            <div class="campo"><label for="horizonte">Duración simulada (s)</label><input type="number" id="horizonte" min="0" step="any"></div>
+            <div class="campo"><label for="calentamiento">Calentamiento (s)</label><input type="number" id="calentamiento" min="0" step="any"></div>
+          </div>
+          <div class="fila-linea">
+            <div class="campo"><label for="semilla">Semilla</label><input type="number" id="semilla" min="0" max="4294967295" step="1"></div>
+            <button type="button" id="btn-semilla">Otra semilla</button>
+          </div>
+          <p class="error" id="corrida-error" hidden></p>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="tarjeta motor" aria-labelledby="t-motor">
+      <header><h2 id="t-motor">El motor por dentro</h2><p>Saca el evento más próximo, adelanta el reloj y ejecuta su efecto.</p></header>
+      <div class="estado">
+        <div><span class="etiqueta">En el sistema</span><div class="valor" id="e-sistema">0</div></div>
+        <div><span class="etiqueta">En cola</span><div class="valor" id="e-cola">0</div></div>
+        <div><span class="etiqueta">Pod</span><div class="valor" id="e-pod">libre</div></div>
+      </div>
+      <div class="subpanel">
+        <h3>Lista de eventos futuros</h3>
+        <div class="desliza">
+          <table aria-label="Lista de eventos futuros">
+            <thead><tr><th class="num">Instante (ms)</th><th>Evento</th><th class="num">Petición</th><th class="num">Faltan (ms)</th></tr></thead>
+            <tbody id="tabla-lista"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="subpanel">
+        <h3>Bitácora de eventos ejecutados</h3>
+        <div class="desliza alto">
+          <table aria-label="Bitácora de eventos ejecutados">
+            <thead><tr><th class="num">Instante (ms)</th><th>Evento</th><th>Qué cambió</th><th class="num">N</th></tr></thead>
+            <tbody id="tabla-bitacora"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="resultados">
+    <section class="tarjeta" aria-labelledby="t-res">
+      <header>
+        <h2 id="t-res">Simulación frente a teoría</h2>
+        <p><span class="chapa" id="kendall">M/M/1</span> <span id="teoria-nombre"></span></p>
+      </header>
+      <p class="aviso" id="teoria-nota" hidden></p>
+      <div class="desliza">
+        <table aria-label="Indicadores simulados y teóricos">
+          <thead><tr><th>Indicador</th><th></th><th class="num"><span class="clave"></span>Simulado</th><th class="num"><span class="clave teo"></span>Teórico</th><th class="num">Diferencia</th></tr></thead>
+          <tbody id="tabla-metricas"></tbody>
+        </table>
+      </div>
+      <p class="nota" id="metricas-nota"></p>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="t-ver">
+      <header><h2 id="t-ver">Verificación en vivo</h2></header>
+      <ul class="verificaciones" id="verificaciones"></ul>
+    </section>
+  </div>
+
+  <div class="graficos">
+    <section class="tarjeta" aria-labelledby="t-g1">
+      <header><h2 id="t-g1">Peticiones en el sistema</h2><p>Últimos cambios de estado</p></header>
+      <div class="leyenda"><span><span class="clave"></span>N(t) simulado</span><span id="ley-g1-teo"><span class="clave teo"></span>L teórico</span></div>
+      <div class="grafico" id="g-n"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-g2">
+      <header><h2 id="t-g2">Convergencia del tiempo de respuesta</h2><p>Media acumulada, en ms</p></header>
+      <div class="leyenda"><span><span class="clave"></span>Media simulada</span><span id="ley-g2-teo"><span class="clave teo"></span>W teórico</span></div>
+      <div class="grafico" id="g-w"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-g3">
+      <header><h2 id="t-g3">Distribución del tiempo de respuesta</h2><p>Hasta el percentil 99</p></header>
+      <div class="leyenda"><span><span class="clave caja"></span>Peticiones simuladas</span><span id="ley-g3-teo"><span class="clave teo"></span>Densidad teórica</span></div>
+      <div class="grafico" id="g-h"><svg></svg><div class="globo" hidden></div></div>
+    </section>
+  </div>
+
+  <div class="cierre">
+    <section class="tarjeta" aria-labelledby="t-json">
+      <header><h2 id="t-json">Escenario en JSON</h2><p>Con este texto y la semilla, cualquiera repite la corrida.</p></header>
+      <label for="json-texto">Definición del escenario</label>
+      <textarea id="json-texto" spellcheck="false"></textarea>
+      <div class="acciones">
+        <button type="button" id="btn-json-aplicar">Aplicar este JSON</button>
+        <button type="button" id="btn-json-copiar">Copiar</button>
+        <span class="tenue" id="json-estado" role="status"></span>
+      </div>
+      <p class="error" id="json-error" hidden></p>
+    </section>
+    <section class="tarjeta" aria-labelledby="t-glos">
+      <header><h2 id="t-glos">De Kubernetes al modelo</h2></header>
+      <div class="desliza">
+        <table>
+          <thead><tr><th>En el clúster</th><th>En la simulación</th></tr></thead>
+          <tbody>
+            <tr><td>Petición HTTP</td><td>Entidad que recorre el sistema</td></tr>
+            <tr><td>Pod con un contenedor</td><td>Servidor: atiende una petición a la vez</td></tr>
+            <tr><td>Peticiones esperando</td><td>Cola en orden de llegada (FIFO)</td></tr>
+            <tr><td>Cola llena, respuesta 503</td><td>Capacidad finita: la entidad se rechaza</td></tr>
+            <tr><td>Uso de CPU del contenedor</td><td>Utilización ρ: fracción del tiempo ocupado</td></tr>
+            <tr><td>Latencia p95 del servicio</td><td>Percentil 95 del tiempo de respuesta</td></tr>
+            <tr><td>Peticiones por segundo</td><td>Tasa de llegadas λ y rendimiento X</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">En los applets siguientes el pod se multiplica en réplicas, aparecen los nodos con sus requests y limits, y el HPA cambia el número de servidores durante la corrida.</p>
+    </section>
+  </div>
+
+  <p class="pie">Motor de eventos discretos propio, en JavaScript: corre en el navegador, sin servidor ni instalación. Los tiempos están en milisegundos y las tasas en peticiones por segundo.</p>
+</div>
+<script>
+/*__CODIGO__*/
+</script>
